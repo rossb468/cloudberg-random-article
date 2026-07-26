@@ -1,0 +1,10 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cloudberg-app",
+      "url": "http://localhost:8743",
+      "port": 8743
+    }
+  ]
+}

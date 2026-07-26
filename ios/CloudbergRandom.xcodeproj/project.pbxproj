@@ -1,0 +1,301 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		E6FA4ACBCBA54918B6D77D0A /* CloudbergRandomApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84FB51DBD1CF4CEFB57C4FDA /* CloudbergRandomApp.swift */; };
+		3C71B455BDD648F5ACFCD580 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7949653CF3784F9E915C0123 /* ContentView.swift */; };
+		B250DC54893345C59C643198 /* Article.swift in Sources */ = {isa = PBXBuildFile; fileRef = A94B310CA02841D6BD5FD9A3 /* Article.swift */; };
+		EC8200E6A4D741D68692E357 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BE659039F42BA8ABEF521 /* Theme.swift */; };
+		A1B796E1D2F14EE28D448255 /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1DC8D2B506D4951AAAF9D1C /* SafariView.swift */; };
+		06F6E9DA84E14590AC70CCB7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ECA11AB0A5A447BD9B9E4C3B /* Assets.xcassets */; };
+		D1E140780D2A4E21A45CDDDB /* articles.json in Resources */ = {isa = PBXBuildFile; fileRef = FFF1EA843AD04A5BAD21DDF4 /* articles.json */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		84FB51DBD1CF4CEFB57C4FDA /* CloudbergRandomApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudbergRandomApp.swift; sourceTree = "<group>"; };
+		7949653CF3784F9E915C0123 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A94B310CA02841D6BD5FD9A3 /* Article.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Article.swift; sourceTree = "<group>"; };
+		4C5BE659039F42BA8ABEF521 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		E1DC8D2B506D4951AAAF9D1C /* SafariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
+		ECA11AB0A5A447BD9B9E4C3B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		FFF1EA843AD04A5BAD21DDF4 /* articles.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = articles.json; sourceTree = "<group>"; };
+		4FEBD2A37EA3433FA10376C9 /* CloudbergRandom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudbergRandom.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5FC4C36C577C41B6BAB9D17A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5B5E1D940C1144528057FF60 = {
+			isa = PBXGroup;
+			children = (
+				6F8218BCC3304882AB698A48 /* CloudbergRandom */,
+				D0DBB98B643C4739AE3A1A2C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6F8218BCC3304882AB698A48 /* CloudbergRandom */ = {
+			isa = PBXGroup;
+			children = (
+				84FB51DBD1CF4CEFB57C4FDA /* CloudbergRandomApp.swift */,
+				7949653CF3784F9E915C0123 /* ContentView.swift */,
+				A94B310CA02841D6BD5FD9A3 /* Article.swift */,
+				4C5BE659039F42BA8ABEF521 /* Theme.swift */,
+				E1DC8D2B506D4951AAAF9D1C /* SafariView.swift */,
+				ECA11AB0A5A447BD9B9E4C3B /* Assets.xcassets */,
+				82097018CCC6443CB1C94A96 /* Resources */,
+			);
+			path = CloudbergRandom;
+			sourceTree = "<group>";
+		};
+		82097018CCC6443CB1C94A96 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				FFF1EA843AD04A5BAD21DDF4 /* articles.json */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		D0DBB98B643C4739AE3A1A2C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4FEBD2A37EA3433FA10376C9 /* CloudbergRandom.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		27523E59049B4337937533D5 /* CloudbergRandom */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC7F61A726EE4AEFA0759718 /* Build configuration list for PBXNativeTarget "CloudbergRandom" */;
+			buildPhases = (
+				6E4E755982A440C982B03EF4 /* Sources */,
+				5FC4C36C577C41B6BAB9D17A /* Frameworks */,
+				1A2DEE454656435984D6E19B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CloudbergRandom;
+			productName = CloudbergRandom;
+			productReference = 4FEBD2A37EA3433FA10376C9 /* CloudbergRandom.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		374AF51487F04DD88DD6ED93 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					27523E59049B4337937533D5 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+				};
+			};
+			buildConfigurationList = C6F38EB4B43247B8A6A53DB2 /* Build configuration list for PBXProject "CloudbergRandom" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 5B5E1D940C1144528057FF60;
+			productRefGroup = D0DBB98B643C4739AE3A1A2C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				27523E59049B4337937533D5 /* CloudbergRandom */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1A2DEE454656435984D6E19B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				06F6E9DA84E14590AC70CCB7 /* Assets.xcassets in Resources */,
+				D1E140780D2A4E21A45CDDDB /* articles.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6E4E755982A440C982B03EF4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E6FA4ACBCBA54918B6D77D0A /* CloudbergRandomApp.swift in Sources */,
+				3C71B455BDD648F5ACFCD580 /* ContentView.swift in Sources */,
+				B250DC54893345C59C643198 /* Article.swift in Sources */,
+				EC8200E6A4D741D68692E357 /* Theme.swift in Sources */,
+				A1B796E1D2F14EE28D448255 /* SafariView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1C67A86E9D974E4F97A8ADF6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		DB8A249798314CFDA49BECDD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		8EC049D6EB924EB087CF3990 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Cloudberg;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rossbower.cloudbergrandom;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		6E3E0DA848A14DCB93C3F4E2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Cloudberg;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rossbower.cloudbergrandom;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C6F38EB4B43247B8A6A53DB2 /* Build configuration list for PBXProject "CloudbergRandom" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1C67A86E9D974E4F97A8ADF6 /* Debug */,
+				DB8A249798314CFDA49BECDD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CC7F61A726EE4AEFA0759718 /* Build configuration list for PBXNativeTarget "CloudbergRandom" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8EC049D6EB924EB087CF3990 /* Debug */,
+				6E3E0DA848A14DCB93C3F4E2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 374AF51487F04DD88DD6ED93 /* Project object */;
+}
