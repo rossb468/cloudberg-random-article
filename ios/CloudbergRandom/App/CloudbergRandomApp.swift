@@ -4,7 +4,7 @@ import SwiftUI
 struct CloudbergRandomApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
                 .preferredColorScheme(.dark)
         }
     }

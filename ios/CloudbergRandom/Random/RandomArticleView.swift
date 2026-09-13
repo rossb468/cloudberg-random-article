@@ -1,6 +1,8 @@
 import SwiftUI
 
-struct ContentView: View {
+struct RandomArticleView: View {
+    @Environment(\.openArticle) private var openArticle
+
     private let articles = ArticleStore.all
 
     @State private var currentIndex: Int = -1
@@ -153,9 +155,7 @@ struct ContentView: View {
             }
 
             Button {
-                if let url = URL(string: article.url) {
-                    safariTarget = IdentifiableURL(url: url)
-                }
+                openArticle(article)
             } label: {
                 Text("Read full article ↗")
                     .font(.subheadline.bold())
@@ -202,5 +202,5 @@ struct IdentifiableURL: Identifiable {
 }
 
 #Preview {
-    ContentView()
+    RandomArticleView()
 }
