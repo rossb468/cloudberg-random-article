@@ -11,9 +11,9 @@ struct Article: Codable, Identifiable {
 
     var id: String { url }
 
-    /// Medium's post id, the hex suffix of the article URL.
+    /// Medium's post id: the hex suffix after the slug's last hyphen (8–12 digits).
     var postID: String {
-        url.range(of: "[0-9a-f]{10,12}$", options: .regularExpression).map { String(url[$0]) } ?? url
+        url.range(of: "-[0-9a-f]{8,12}$", options: .regularExpression).map { String(url[$0].dropFirst()) } ?? url
     }
 
     var webURL: URL? { URL(string: url) }
@@ -23,8 +23,7 @@ struct Article: Codable, Identifiable {
     }
 
     var coverImageURL: URL? {
-        guard let image, !image.isEmpty else { return nil }
-        return URL(string: "https://miro.medium.com/v2/resize:fit:1200/\(image)")
+        MediumImage.url(id: image ?? "", width: 1200)
     }
 
     var publishedDateText: String? {

@@ -16,4 +16,14 @@ struct CatalogTests {
         )
         #expect(article.postID == "c61094867d45")
     }
+
+    @Test func postIDsCanBeShorterThanTwelveDigits() {
+        let article = Article(
+            title: "All the President’s Men",
+            subtitle: nil,
+            url: "https://admiralcloudberg.medium.com/all-the-presidents-men-the-death-of-lech-kaczyński-590a3977f",
+            wordCount: nil, readingTime: nil, publishedAt: nil, image: nil
+        )
+        #expect(article.postID == "590a3977f")
+    }
 }
