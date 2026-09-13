@@ -7,24 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E6FA4ACBCBA54918B6D77D0A /* CloudbergRandomApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84FB51DBD1CF4CEFB57C4FDA /* CloudbergRandomApp.swift */; };
-		3C71B455BDD648F5ACFCD580 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7949653CF3784F9E915C0123 /* ContentView.swift */; };
-		B250DC54893345C59C643198 /* Article.swift in Sources */ = {isa = PBXBuildFile; fileRef = A94B310CA02841D6BD5FD9A3 /* Article.swift */; };
-		EC8200E6A4D741D68692E357 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BE659039F42BA8ABEF521 /* Theme.swift */; };
-		A1B796E1D2F14EE28D448255 /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1DC8D2B506D4951AAAF9D1C /* SafariView.swift */; };
 		06F6E9DA84E14590AC70CCB7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ECA11AB0A5A447BD9B9E4C3B /* Assets.xcassets */; };
+		3C71B455BDD648F5ACFCD580 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7949653CF3784F9E915C0123 /* ContentView.swift */; };
+		A1B796E1D2F14EE28D448255 /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1DC8D2B506D4951AAAF9D1C /* SafariView.swift */; };
+		B250DC54893345C59C643198 /* Article.swift in Sources */ = {isa = PBXBuildFile; fileRef = A94B310CA02841D6BD5FD9A3 /* Article.swift */; };
 		D1E140780D2A4E21A45CDDDB /* articles.json in Resources */ = {isa = PBXBuildFile; fileRef = FFF1EA843AD04A5BAD21DDF4 /* articles.json */; };
+		E6FA4ACBCBA54918B6D77D0A /* CloudbergRandomApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84FB51DBD1CF4CEFB57C4FDA /* CloudbergRandomApp.swift */; };
+		EC8200E6A4D741D68692E357 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C5BE659039F42BA8ABEF521 /* Theme.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		84FB51DBD1CF4CEFB57C4FDA /* CloudbergRandomApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudbergRandomApp.swift; sourceTree = "<group>"; };
-		7949653CF3784F9E915C0123 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A94B310CA02841D6BD5FD9A3 /* Article.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Article.swift; sourceTree = "<group>"; };
 		4C5BE659039F42BA8ABEF521 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		4FEBD2A37EA3433FA10376C9 /* CloudbergRandom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudbergRandom.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7949653CF3784F9E915C0123 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		84FB51DBD1CF4CEFB57C4FDA /* CloudbergRandomApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudbergRandomApp.swift; sourceTree = "<group>"; };
+		A94B310CA02841D6BD5FD9A3 /* Article.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Article.swift; sourceTree = "<group>"; };
 		E1DC8D2B506D4951AAAF9D1C /* SafariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
 		ECA11AB0A5A447BD9B9E4C3B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FFF1EA843AD04A5BAD21DDF4 /* articles.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = articles.json; sourceTree = "<group>"; };
-		4FEBD2A37EA3433FA10376C9 /* CloudbergRandom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudbergRandom.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -187,26 +187,33 @@
 			};
 			name = Debug;
 		};
-		DB8A249798314CFDA49BECDD /* Release */ = {
+		6E3E0DA848A14DCB93C3F4E2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				SDKROOT = iphoneos;
-				SWIFT_COMPILATION_MODE = wholemodule;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = K45ESR7P8R;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Cloudberg;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rossbower.cloudbergrandom;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				VALIDATE_PRODUCT = YES;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -214,11 +221,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = K45ESR7P8R;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Cloudberg;
@@ -239,32 +247,26 @@
 			};
 			name = Debug;
 		};
-		6E3E0DA848A14DCB93C3F4E2 /* Release */ = {
+		DB8A249798314CFDA49BECDD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "";
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Cloudberg;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.rossbower.cloudbergrandom;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
