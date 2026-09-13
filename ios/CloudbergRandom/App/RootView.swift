@@ -26,13 +26,15 @@ struct RootView: View {
             // for exercising the offline library in the simulator without taps.
             let count = UserDefaults.standard.integer(forKey: "debugDownloadNewest")
             if count > 0 { OfflineLibrary.shared.downloadAll(Array(ArticleStore.all.suffix(count))) }
+            // `-debugOpenArticle <postID>` opens an article in the reader at launch.
+            if let postID = UserDefaults.standard.string(forKey: "debugOpenArticle") {
+                openedArticle = ArticleStore.all.first { $0.postID == postID }
+            }
         }
         #endif
-        .sheet(item: $openedArticle) { article in
-            if let url = article.webURL {
-                SafariView(url: url)
-                    .ignoresSafeArea()
-            }
+        .fullScreenCover(item: $openedArticle) { article in
+            ReaderView(article: article)
+                .environment(OfflineLibrary.shared)
         }
     }
 }
