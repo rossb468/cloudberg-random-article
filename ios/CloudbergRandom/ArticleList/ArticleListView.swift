@@ -18,6 +18,7 @@ struct ArticleListView: View {
                             } label: {
                                 ArticleRow(article: article)
                             }
+                            .swipeActions(edge: .trailing) { offlineSwipeAction(for: article) }
                             .listRowBackground(Theme.background)
                             .listRowSeparatorTint(Theme.border)
                         }
@@ -54,6 +55,18 @@ struct ArticleListView: View {
                     }
                 }
             }
+        }
+    }
+
+    @Environment(OfflineLibrary.self) private var library
+
+    @ViewBuilder
+    private func offlineSwipeAction(for article: Article) -> some View {
+        if library.isAvailableOffline(article) {
+            Button("Remove Download", systemImage: "trash", role: .destructive) { library.remove(article) }
+        } else {
+            Button("Download", systemImage: "arrow.down.circle") { library.download(article) }
+                .tint(Theme.accent)
         }
     }
 
@@ -106,6 +119,8 @@ struct ArticleRow: View {
                 .foregroundColor(Theme.textDim)
             }
             Spacer(minLength: 0)
+            OfflineStatusIcon(article: article)
+                .font(.title3)
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
@@ -114,5 +129,6 @@ struct ArticleRow: View {
 
 #Preview {
     ArticleListView()
+        .environment(OfflineLibrary.shared)
         .preferredColorScheme(.dark)
 }
