@@ -10,6 +10,7 @@ struct ReaderView: View {
     @State private var document: ReaderDocument?
     @State private var loadError: String?
     @State private var webPage: IdentifiableURL?
+    @State private var showingSettings = false
 
     var body: some View {
         NavigationStack {
@@ -31,6 +32,21 @@ struct ReaderView: View {
         .tint(settings.palette.accent)
         .preferredColorScheme(settings.palette.colorScheme)
         .task { await load() }
+        .onAppear {
+            UIApplication.shared.isIdleTimerDisabled = settings.keepScreenOn
+            #if DEBUG
+            showingSettings = UserDefaults.standard.bool(forKey: "debugShowReaderSettings")
+            #endif
+        }
+        .onChange(of: settings.keepScreenOn) { _, keepOn in
+            UIApplication.shared.isIdleTimerDisabled = keepOn
+        }
+        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+        .sheet(isPresented: $showingSettings) {
+            ReaderSettingsView(settings: settings)
+                .presentationDetents([.medium, .large])
+                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        }
         .sheet(item: $webPage) { page in
             SafariView(url: page.url).ignoresSafeArea()
         }
@@ -120,6 +136,12 @@ struct ReaderView: View {
                 Image(systemName: "xmark")
             }
             .accessibilityLabel("Close")
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button { showingSettings = true } label: {
+                Image(systemName: "textformat.size")
+            }
+            .accessibilityLabel("Reading settings")
         }
         ToolbarItem(placement: .topBarTrailing) {
             Menu {

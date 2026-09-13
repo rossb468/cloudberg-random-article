@@ -106,7 +106,9 @@ final class ReaderSettings {
         load()
     }
 
-    var palette: Palette {
+    var palette: Palette { palette(for: theme) }
+
+    func palette(for theme: ColorTheme) -> Palette {
         switch theme {
         case .paper:
             Palette(background: .hex(0xFBFAF7), text: .hex(0x1D1D1F), secondaryText: .hex(0x6E6E73), accent: .hex(0xA85A12), colorScheme: .light)
