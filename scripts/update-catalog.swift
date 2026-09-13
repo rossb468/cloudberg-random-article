@@ -24,6 +24,11 @@ let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWeb
 /// Standalone posts shorter than this (progress updates, announcements) aren't articles.
 let minimumArticleWords = 1000
 
+/// Non-article posts long enough to get past `minimumArticleWords`.
+let excludedPostIDs: Set<String> = [
+    "24f9093cbc40", // Progress Update: New article coming soon, and a teaser
+]
+
 var cacheDir: URL?
 if let i = CommandLine.arguments.firstIndex(of: "--cache-dir"), i + 1 < CommandLine.arguments.count {
     let dir = URL(fileURLWithPath: CommandLine.arguments[i + 1], isDirectory: true)
@@ -96,7 +101,7 @@ struct CatalogEntry: Codable {
 }
 
 func entry(for pageURL: String) async -> CatalogEntry? {
-    guard let id = postID(from: pageURL), let url = URL(string: pageURL) else { return nil }
+    guard let id = postID(from: pageURL), !excludedPostIDs.contains(id), let url = URL(string: pageURL) else { return nil }
     do {
         guard let state = apolloState(in: try await page(url, postID: id)),
               let post = state["Post:\(id)"] as? [String: Any],
