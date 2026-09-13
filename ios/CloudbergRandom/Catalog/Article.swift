@@ -11,18 +11,24 @@ struct Article: Codable, Identifiable {
 
     var id: String { url }
 
+    /// Medium's post id, the hex suffix of the article URL.
+    var postID: String {
+        url.range(of: "[0-9a-f]{10,12}$", options: .regularExpression).map { String(url[$0]) } ?? url
+    }
+
+    var webURL: URL? { URL(string: url) }
+
+    var publishedDate: Date? {
+        publishedAt.map { Date(timeIntervalSince1970: Double($0) / 1000) }
+    }
+
     var coverImageURL: URL? {
         guard let image, !image.isEmpty else { return nil }
         return URL(string: "https://miro.medium.com/v2/resize:fit:1200/\(image)")
     }
 
     var publishedDateText: String? {
-        guard let publishedAt else { return nil }
-        let date = Date(timeIntervalSince1970: Double(publishedAt) / 1000)
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
+        publishedDate?.formatted(date: .abbreviated, time: .omitted)
     }
 
     var readingTimeText: String? {
