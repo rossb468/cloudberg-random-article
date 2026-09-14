@@ -21,6 +21,13 @@ struct ReaderView: View {
     @State private var resumeOffer: ReadingState?
     /// Moves we make on the reader's behalf (resume, go back) aren't jumps.
     @State private var ignoreJumpsUntil = Date.distantPast
+    /// Set when the offer came from navigating (contents, bookmarks, stepping):
+    /// it stays until used or dismissed so you can look something up and return.
+    @State private var returnOfferIsSticky = false
+
+    // Bookmarks & sections
+    @State private var bookmarks: [Bookmark] = []
+    @State private var showingNavigator = false
 
     var body: some View {
         NavigationStack {
@@ -42,6 +49,19 @@ struct ReaderView: View {
         .tint(settings.palette.accent)
         .preferredColorScheme(settings.palette.colorScheme)
         .task { await load() }
+        .onChange(of: bookmarks) { _, bookmarks in
+            var state = ReadingStateStore.shared.state(for: article.postID)
+            state.bookmarks = bookmarks
+            ReadingStateStore.shared.save(state, for: article.postID)
+        }
+        .sheet(isPresented: $showingNavigator) {
+            if let document {
+                NavigatorView(document: document, currentBlockID: topBlockID, bookmarks: $bookmarks) { blockID in
+                    navigate(to: blockID, in: document)
+                }
+                .presentationDetents([.medium, .large])
+            }
+        }
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = settings.keepScreenOn
             #if DEBUG
@@ -60,7 +80,7 @@ struct ReaderView: View {
         .fullScreenCover(item: $galleryStart) { start in
             if let document {
                 ImageGalleryView(images: document.images, startingAt: start) { image in
-                    scrollTarget = image.blockID
+                    navigate(to: image.blockID, in: document)
                 }
             }
         }
@@ -106,7 +126,7 @@ struct ReaderView: View {
             }
         }
         .task(id: returnOffer) {
-            guard returnOffer != nil else { return }
+            guard returnOffer != nil, !returnOfferIsSticky else { return }
             try? await Task.sleep(for: .seconds(12))
             withAnimation { returnOffer = nil }
         }
@@ -175,6 +195,32 @@ struct ReaderView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .bottomBar) {
+            if let document {
+                let previous = document.previousStop(before: topBlockID, bookmarks: bookmarks)
+                let next = document.nextStop(after: topBlockID, bookmarks: bookmarks)
+                Button { showingNavigator = true } label: {
+                    Image(systemName: "list.bullet")
+                }
+                .accessibilityLabel("Contents and bookmarks")
+                Spacer()
+                Button { previous.map { navigate(to: $0.blockID, in: document) } } label: {
+                    Image(systemName: "chevron.up")
+                }
+                .disabled(previous == nil)
+                .accessibilityLabel("Previous section or bookmark")
+                Button { toggleBookmark(in: document) } label: {
+                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                }
+                .sensoryFeedback(.selection, trigger: bookmarks.count)
+                .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Bookmark this paragraph")
+                Button { next.map { navigate(to: $0.blockID, in: document) } } label: {
+                    Image(systemName: "chevron.down")
+                }
+                .disabled(next == nil)
+                .accessibilityLabel("Next section or bookmark")
+            }
+        }
         ToolbarItem(placement: .principal) {
             if let document, let topBlockID {
                 Text("\(Int((document.progress(at: topBlockID) * 100).rounded()))%")
@@ -215,6 +261,7 @@ struct ReaderView: View {
             let document = ReaderDocument(post: post, title: article.title)
             self.document = document
             let saved = ReadingStateStore.shared.state(for: article.postID)
+            bookmarks = saved.bookmarks
             if let blockID = saved.blockID, document.index(of: blockID) != nil, saved.progress > 0.02 {
                 resumeOffer = saved
             }
@@ -230,6 +277,39 @@ struct ReaderView: View {
         }
     }
 
+    // MARK: - Bookmarks & sections
+
+    private var isBookmarked: Bool {
+        guard let topBlockID else { return false }
+        return bookmarks.contains { $0.blockID == topBlockID }
+    }
+
+    private func toggleBookmark(in document: ReaderDocument) {
+        guard let blockID = topBlockID ?? document.blocks.first?.id else { return }
+        if let index = bookmarks.firstIndex(where: { $0.blockID == blockID }) {
+            bookmarks.remove(at: index)
+        } else {
+            bookmarks.append(Bookmark(blockID: blockID, excerpt: document.excerpt(at: blockID)))
+        }
+    }
+
+    /// Moves to a section, bookmark or image, leaving a way back to where you
+    /// were reading.
+    private func navigate(to blockID: String, in document: ReaderDocument) {
+        if returnOffer == nil, let origin = topBlockID, origin != blockID {
+            withAnimation {
+                returnOffer = JumpDetector.Jump(
+                    fromBlockID: origin,
+                    fromProgress: document.progress(at: origin),
+                    toProgress: document.progress(at: blockID)
+                )
+            }
+            returnOfferIsSticky = true
+        }
+        ignoreJumpsUntil = .now.addingTimeInterval(1.5)
+        scrollTarget = blockID
+    }
+
     // MARK: - Reading position
 
     @ViewBuilder
@@ -240,6 +320,7 @@ struct ReaderView: View {
                     move(to: returnOffer.fromBlockID)
                 } onDismiss: {
                     self.returnOffer = nil
+                    returnOfferIsSticky = false
                 }
             } else if let resumeOffer, let blockID = resumeOffer.blockID {
                 ResumeBanner(progress: resumeOffer.progress, palette: settings.palette) {
@@ -265,12 +346,13 @@ struct ReaderView: View {
             // Start fresh from wherever we were moved to.
             detector = JumpDetector()
             _ = detector.update(blockID: blockID, progress: progress, at: now)
-        } else if let jump = detector.update(blockID: blockID, progress: progress, at: now) {
+        } else if let jump = detector.update(blockID: blockID, progress: progress, at: now), !returnOfferIsSticky {
             withAnimation { returnOffer = jump }
         }
 
-        if let offer = returnOffer, abs(progress - offer.fromProgress) < 0.02 {
+        if let offer = returnOffer, abs(progress - offer.fromProgress) < 0.02, now >= ignoreJumpsUntil {
             withAnimation { returnOffer = nil }
+            returnOfferIsSticky = false
         }
         if resumeOffer != nil, progress > 0.1 {
             withAnimation { resumeOffer = nil }
@@ -298,6 +380,7 @@ struct ReaderView: View {
             returnOffer = nil
             resumeOffer = nil
         }
+        returnOfferIsSticky = false
         scrollTarget = blockID
     }
 
