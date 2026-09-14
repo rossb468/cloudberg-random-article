@@ -145,32 +145,42 @@ struct RandomArticleView: View {
     }
 
     private func actions(for article: Article) -> some View {
-        HStack(spacing: 12) {
-            Button(action: showRandomArticle) {
-                Text("🎲 New random article")
-                    .font(.subheadline.bold())
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Theme.accent)
-                    .foregroundColor(Theme.accentText)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-
-            Button {
-                openArticle(article)
-            } label: {
-                Text("Read full article ↗")
-                    .font(.subheadline.bold())
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .foregroundColor(Theme.text)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Theme.border, lineWidth: 1)
-                    )
-            }
+        // Side by side when there's room; stacked on narrower phones or at
+        // larger text sizes, instead of pushing the card off screen.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { actionButtons(for: article) }
+            VStack(alignment: .leading, spacing: 10) { actionButtons(for: article) }
         }
         .padding(.top, 4)
+    }
+
+    @ViewBuilder
+    private func actionButtons(for article: Article) -> some View {
+        Button(action: showRandomArticle) {
+            Text("🎲 New random article")
+                .font(.subheadline.bold())
+                .fixedSize()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Theme.accent)
+                .foregroundColor(Theme.accentText)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+
+        Button {
+            openArticle(article)
+        } label: {
+            Text("Read full article")
+                .font(.subheadline.bold())
+                .fixedSize()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .foregroundColor(Theme.text)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Theme.border, lineWidth: 1)
+                )
+        }
     }
 
     private var footer: some View {
