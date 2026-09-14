@@ -6,6 +6,10 @@ struct RedditDiscussion: Codable, Identifiable, Equatable {
     let title: String
     let permalink: String
     let createdAt: Int64
+    /// As archived about a day and a half after posting.
+    var score: Int? = nil
+    var comments: Int? = nil
+    var upvoteRatio: Double? = nil
 
     var url: URL? { URL(string: permalink) }
 
