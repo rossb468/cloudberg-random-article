@@ -8,6 +8,9 @@ struct MediumPost: Codable, Equatable {
     let title: String
     let paragraphs: [MediumParagraph]
     let fetchedAt: Date
+    /// Medium engagement when fetched. Absent in posts saved by older versions.
+    var clapCount: Int? = nil
+    var responseCount: Int? = nil
 
     var imageIDs: [String] {
         paragraphs.compactMap { $0.image?.id }.filter { !$0.isEmpty }
