@@ -5,6 +5,8 @@ struct ArticleListView: View {
     @AppStorage("articleList.sort") private var sort: ArticleSort = .newest
     @State private var searchText = ""
     @State private var webPage: IdentifiableURL?
+    @State private var statsArticle: Article?
+    @Environment(EngagementStore.self) private var engagement
 
     private let articles = ArticleStore.all
 
@@ -23,6 +25,7 @@ struct ArticleListView: View {
                             .contextMenu {
                                 Button("Read", systemImage: "book") { openArticle(article) }
                                 RedditDiscussionMenuItems(article: article) { webPage = IdentifiableURL(url: $0) }
+                                Button("Engagement Stats", systemImage: "chart.bar") { statsArticle = article }
                             }
                             .listRowBackground(Theme.background)
                             .listRowSeparatorTint(Theme.border)
@@ -50,13 +53,47 @@ struct ArticleListView: View {
             .sheet(item: $webPage) { page in
                 SafariView(url: page.url).ignoresSafeArea()
             }
+            .sheet(item: $statsArticle) { article in
+                ArticleStatsView(article: article)
+                    .presentationDetents([.medium, .large])
+            }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if engagement.isRefreshing {
+                        HStack(spacing: 6) {
+                            ProgressView()
+                            Text("\(engagement.refreshProgress.done)/\(engagement.refreshProgress.total)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundColor(Theme.textDim)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Updating Medium stats")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("Sort", selection: $sort) {
-                            ForEach(ArticleSort.allCases) { option in
+                            ForEach(ArticleSort.allCases.filter { !$0.isEngagement }) { option in
                                 Label(option.label, systemImage: option.systemImage).tag(option)
                             }
+                            Section("Engagement") {
+                                ForEach(ArticleSort.allCases.filter(\.isEngagement)) { option in
+                                    Label(option.label, systemImage: option.systemImage).tag(option)
+                                }
+                            }
+                        }
+                        Section {
+                            if engagement.isRefreshing {
+                                Button("Stop Updating Medium Stats", systemImage: "stop.circle") {
+                                    engagement.cancelRefresh()
+                                }
+                            } else {
+                                Button("Update Medium Stats", systemImage: "arrow.clockwise") {
+                                    engagement.refreshMediumStats()
+                                }
+                            }
+                        } footer: {
+                            Text("Re-reads every article page from Medium for current claps and responses.")
                         }
                     } label: {
                         Label("Sort", systemImage: "arrow.up.arrow.down")
@@ -79,7 +116,7 @@ struct ArticleListView: View {
     }
 
     private var filtered: [Article] {
-        sort.sorted(articles.filter { $0.matches(search: searchText) })
+        sort.sorted(articles.filter { $0.matches(search: searchText) }, context: engagement.sortContext)
     }
 
     private var sections: [(title: String?, articles: [Article])] {
@@ -100,6 +137,7 @@ struct ArticleListView: View {
 
 struct ArticleRow: View {
     let article: Article
+    @Environment(EngagementStore.self) private var engagement
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -125,6 +163,7 @@ struct ArticleRow: View {
                 }
                 .font(.caption)
                 .foregroundColor(Theme.textDim)
+                ArticleStatsLine(stats: engagement.stats(for: article))
             }
             Spacer(minLength: 0)
             OfflineStatusIcon(article: article)
@@ -138,5 +177,6 @@ struct ArticleRow: View {
 #Preview {
     ArticleListView()
         .environment(OfflineLibrary.shared)
+        .environment(EngagementStore.shared)
         .preferredColorScheme(.dark)
 }

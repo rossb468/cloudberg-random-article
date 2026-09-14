@@ -31,6 +31,10 @@ final class EngagementStore {
         rebuild()
     }
 
+    var sortContext: ArticleSort.Context {
+        ArticleSort.Context(stats: stats, ranking: ranking)
+    }
+
     func stats(for article: Article) -> ArticleStats {
         stats[article.postID] ?? ArticleStats.from(article: article, discussions: [], mediumOverride: nil)
     }
