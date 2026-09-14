@@ -19,6 +19,7 @@ struct RootView: View {
         }
         .tint(Theme.accent)
         .environment(OfflineLibrary.shared)
+        .environment(EngagementStore.shared)
         .environment(\.openArticle, OpenArticleAction { openedArticle = $0 })
         #if DEBUG
         .task {
@@ -35,6 +36,7 @@ struct RootView: View {
         .fullScreenCover(item: $openedArticle) { article in
             ReaderView(article: article)
                 .environment(OfflineLibrary.shared)
+                .environment(EngagementStore.shared)
         }
     }
 }

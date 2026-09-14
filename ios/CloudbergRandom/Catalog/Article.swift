@@ -8,6 +8,9 @@ struct Article: Codable, Identifiable {
     let readingTime: Double?
     let publishedAt: Int64?
     let image: String?
+    /// Medium engagement in the bundled catalog snapshot.
+    var claps: Int? = nil
+    var responses: Int? = nil
 
     var id: String { url }
 

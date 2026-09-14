@@ -9,6 +9,7 @@ struct MediumClientTests {
     <html><head><script>window.__APOLLO_STATE__ = {
       "Post:abc123def456": {
         "__typename": "Post", "id": "abc123def456", "title": "A Test Article", "isLocked": false,
+        "clapCount": 42, "postResponses": {"__typename": "PostResponses", "count": 7},
         "content({\"postMeteringOptions\":{\"referrer\":\"\"}})": {
           "bodyModel": { "paragraphs": [
             {"__ref": "Paragraph:p_0"}, {"__ref": "Paragraph:p_1"}, {"__ref": "Paragraph:p_2"}, {"__ref": "Paragraph:p_3"},
@@ -65,6 +66,13 @@ struct MediumClientTests {
         #expect(embed.url == "https://www.youtube.com/watch?v=abc")
         #expect(embed.thumbnailURL == "https://i.ytimg.com/vi/abc/hq.jpg")
         #expect(embed.title == "A video")
+    }
+
+    @Test func readsEngagement() throws {
+        let post = try MediumClient.parsePost(html: Data(page.utf8), postID: "abc123def456")
+        #expect(post.clapCount == 42)
+        #expect(post.responseCount == 7)
+        #expect(MediumClient.parseEngagement(html: Data(page.utf8), postID: "abc123def456") == .init(claps: 42, responses: 7))
     }
 
     @Test func missingPostThrows() {

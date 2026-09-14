@@ -22,14 +22,44 @@ struct MediumClient {
     // Medium's Cloudflare rules are stricter for non-browser user agents.
     static let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
 
+    struct Engagement: Equatable {
+        let claps: Int
+        let responses: Int
+    }
+
     func fetchPost(for article: Article) async throws -> MediumPost {
+        try Self.parsePost(html: try await fetchPage(for: article), postID: article.postID)
+    }
+
+    /// Just the clap and response counts from an article page.
+    func fetchEngagement(for article: Article) async throws -> Engagement {
+        guard let engagement = Self.parseEngagement(html: try await fetchPage(for: article), postID: article.postID) else {
+            throw MediumClientError.missingArticleData
+        }
+        return engagement
+    }
+
+    private func fetchPage(for article: Article) async throws -> Data {
         guard let url = article.webURL else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
         request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
         let (data, response) = try await session.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 200
         guard status == 200 else { throw MediumClientError.httpStatus(status) }
-        return try Self.parsePost(html: data, postID: article.postID)
+        return data
+    }
+
+    static func parseEngagement(html: Data, postID: String) -> Engagement? {
+        guard let stateData = apolloStateJSON(in: html),
+              let state = try? JSONSerialization.jsonObject(with: stateData) as? [String: Any],
+              let post = state["Post:\(postID)"] as? [String: Any] else { return nil }
+        return engagement(in: post)
+    }
+
+    private static func engagement(in post: [String: Any]) -> Engagement? {
+        guard let claps = post["clapCount"] as? Int else { return nil }
+        let responses = (post["postResponses"] as? [String: Any])?["count"] as? Int ?? 0
+        return Engagement(claps: claps, responses: responses)
     }
 
     static func parsePost(html: Data, postID: String, fetchedAt: Date = .now) throws -> MediumPost {
@@ -54,11 +84,14 @@ struct MediumClient {
         }
         guard !paragraphs.isEmpty else { throw MediumClientError.missingArticleData }
 
+        let engagement = engagement(in: post)
         return MediumPost(
             id: postID,
             title: post["title"] as? String ?? "",
             paragraphs: paragraphs,
-            fetchedAt: fetchedAt
+            fetchedAt: fetchedAt,
+            clapCount: engagement?.claps,
+            responseCount: engagement?.responses
         )
     }
 

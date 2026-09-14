@@ -8,8 +8,8 @@
 // re-fetched for current metadata.
 //
 // Writes ios/CloudbergRandom/Resources/articles.json and app/data.js. Only
-// metadata is written (title, subtitle, dates, length, cover image id) — article
-// text is never stored in the repo.
+// metadata is written (title, subtitle, dates, length, cover image id, clap and
+// response counts) — article text is never stored in the repo.
 //
 // This is a Swift script on purpose: Medium's Cloudflare rules reject curl's and
 // Python's TLS fingerprints but accept Apple's URLSession.
@@ -98,6 +98,10 @@ struct CatalogEntry: Codable {
     let readingTime: Double
     let publishedAt: Int64
     let image: String
+    /// Medium engagement when the catalog was generated. Optional so catalogs
+    /// written before these existed still load as the starting point.
+    let claps: Int?
+    let responses: Int?
 }
 
 func entry(for pageURL: String) async -> CatalogEntry? {
@@ -122,7 +126,9 @@ func entry(for pageURL: String) async -> CatalogEntry? {
             wordCount: wordCount,
             readingTime: (readingTime * 10).rounded() / 10,
             publishedAt: publishedAt.int64Value,
-            image: ((post["previewImage"] as? [String: Any])?["id"] as? String) ?? ""
+            image: ((post["previewImage"] as? [String: Any])?["id"] as? String) ?? "",
+            claps: (post["clapCount"] as? NSNumber)?.intValue,
+            responses: ((post["postResponses"] as? [String: Any])?["count"] as? NSNumber)?.intValue
         )
     } catch {
         FileHandle.standardError.write(Data("! \(pageURL): \(error)\n".utf8))

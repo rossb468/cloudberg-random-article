@@ -88,6 +88,7 @@ final class OfflineLibrary {
         if let saved = Self.savedPost(id: article.postID) { return saved }
         let post = try await fetchWithRetry(article)
         try save(post)
+        EngagementStore.shared.record(claps: post.clapCount, responses: post.responseCount, for: post.id)
         return post
     }
 

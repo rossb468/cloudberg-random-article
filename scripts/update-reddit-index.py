@@ -16,6 +16,10 @@ Matching, most reliable first:
   2. Otherwise, a post created within two days of publication that shares a
      distinctive word (a flight number, a place name) with the article title.
   3. Otherwise, the post created closest to publication, within six hours.
+
+Each post's score, comment count and upvote ratio are included. Arctic Shift
+records posts about a day and a half after they're made, so these reflect the
+post's first couple of days rather than live totals.
 """
 
 import json
@@ -149,6 +153,9 @@ def main():
                 "title": p["title"],
                 "permalink": "https://www.reddit.com" + p["permalink"],
                 "createdAt": int(p["created_utc"]),
+                "score": p.get("score"),
+                "comments": p.get("num_comments"),
+                "upvoteRatio": round(p["upvote_ratio"], 2) if p.get("upvote_ratio") is not None else None,
             }
             for p in entries
         ]
