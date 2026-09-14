@@ -4,6 +4,7 @@ struct ReaderBlockView: View {
     let block: ReaderDocument.Block
     let settings: ReaderSettings
     var onOpenURL: (URL) -> Void
+    var onOpenImage: (MediumImageMetadata) -> Void = { _ in }
 
     var body: some View {
         switch block.content {
@@ -50,11 +51,11 @@ struct ReaderBlockView: View {
             if layout == .row {
                 HStack(spacing: 4) {
                     ForEach(images, id: \.id) { image in
-                        ArticleImage(id: image.id, aspectRatio: image.aspectRatio)
+                        tappableImage(image)
                     }
                 }
             } else if let image = images.first {
-                ArticleImage(id: image.id, aspectRatio: image.aspectRatio)
+                tappableImage(image)
                     .frame(maxWidth: .infinity)
             }
             if !caption.isEmpty {
@@ -68,6 +69,28 @@ struct ReaderBlockView: View {
         }
         // Wide figures bleed into the margins.
         .padding(.horizontal, layout == .wide ? -CGFloat(settings.margin) * 0.6 : 0)
+    }
+
+    private func tappableImage(_ image: MediumImageMetadata) -> some View {
+        ArticleImage(id: image.id, aspectRatio: image.aspectRatio)
+            .contentShape(Rectangle())
+            .onTapGesture { onOpenImage(image) }
+            .contextMenu {
+                Button("View Full Screen", systemImage: "arrow.up.left.and.arrow.down.right") { onOpenImage(image) }
+                Button("Save to Photos", systemImage: "square.and.arrow.down") {
+                    Task {
+                        if let loaded = try? await ImageLoader.shared.image(id: image.id) {
+                            _ = await PhotoLibrarySaver.save(loaded)
+                        }
+                    }
+                }
+                Button("Copy", systemImage: "doc.on.doc") {
+                    Task { UIPasteboard.general.image = try? await ImageLoader.shared.image(id: image.id) }
+                }
+            }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(image.alt ?? "Image")
+            .accessibilityHint("Opens the image full screen")
     }
 
     private func embedCard(_ embed: MediumEmbed, caption: String) -> some View {

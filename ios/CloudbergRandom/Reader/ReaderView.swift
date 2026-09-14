@@ -11,6 +11,8 @@ struct ReaderView: View {
     @State private var loadError: String?
     @State private var webPage: IdentifiableURL?
     @State private var showingSettings = false
+    @State private var galleryStart: ReaderDocument.Image?
+    @State private var scrollTarget: String?
 
     var body: some View {
         NavigationStack {
@@ -47,6 +49,13 @@ struct ReaderView: View {
                 .presentationDetents([.medium, .large])
                 .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         }
+        .fullScreenCover(item: $galleryStart) { start in
+            if let document {
+                ImageGalleryView(images: document.images, startingAt: start) { image in
+                    scrollTarget = image.blockID
+                }
+            }
+        }
         .sheet(item: $webPage) { page in
             SafariView(url: page.url).ignoresSafeArea()
         }
@@ -55,12 +64,15 @@ struct ReaderView: View {
     // MARK: - Content
 
     private func articleBody(_ document: ReaderDocument) -> some View {
+        ScrollViewReader { proxy in
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 header
                     .padding(.bottom, 24)
                 ForEach(document.blocks) { block in
-                    ReaderBlockView(block: block, settings: settings, onOpenURL: open)
+                    ReaderBlockView(block: block, settings: settings, onOpenURL: open) { metadata in
+                        galleryStart = document.images.first { $0.blockID == block.id && $0.metadata.id == metadata.id }
+                    }
                         .padding(.bottom, spacing(after: block))
                         .id(block.id)
                 }
@@ -71,6 +83,12 @@ struct ReaderView: View {
             .padding(.horizontal, settings.margin)
             .padding(.vertical, 20)
             .frame(maxWidth: .infinity)
+        }
+        .onChange(of: scrollTarget) { _, target in
+            guard let target else { return }
+            withAnimation { proxy.scrollTo(target, anchor: .top) }
+            scrollTarget = nil
+        }
         }
     }
 
@@ -161,6 +179,13 @@ struct ReaderView: View {
         do {
             let post = try await library.post(for: article)
             document = ReaderDocument(post: post, title: article.title)
+            #if DEBUG
+            // `-debugOpenImage N` opens the gallery at the Nth image.
+            let imageNumber = UserDefaults.standard.integer(forKey: "debugOpenImage")
+            if let document, document.images.indices.contains(imageNumber - 1) {
+                galleryStart = document.images[imageNumber - 1]
+            }
+            #endif
         } catch {
             loadError = error.localizedDescription
         }
