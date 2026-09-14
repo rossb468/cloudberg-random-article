@@ -28,6 +28,7 @@ struct ReaderView: View {
     // Bookmarks & sections
     @State private var bookmarks: [Bookmark] = []
     @State private var showingNavigator = false
+    @State private var showingMedia = false
 
     var body: some View {
         NavigationStack {
@@ -54,6 +55,13 @@ struct ReaderView: View {
             state.bookmarks = bookmarks
             ReadingStateStore.shared.save(state, for: article.postID)
         }
+        .sheet(isPresented: $showingMedia) {
+            if let document {
+                MediaBrowserView(document: document) { blockID in
+                    navigate(to: blockID, in: document)
+                }
+            }
+        }
         .sheet(isPresented: $showingNavigator) {
             if let document {
                 NavigatorView(document: document, currentBlockID: topBlockID, bookmarks: $bookmarks) { blockID in
@@ -66,6 +74,8 @@ struct ReaderView: View {
             UIApplication.shared.isIdleTimerDisabled = settings.keepScreenOn
             #if DEBUG
             showingSettings = UserDefaults.standard.bool(forKey: "debugShowReaderSettings")
+            showingNavigator = UserDefaults.standard.string(forKey: "debugShowReaderPanel") == "contents"
+            showingMedia = UserDefaults.standard.string(forKey: "debugShowReaderPanel") == "media"
             #endif
         }
         .onChange(of: settings.keepScreenOn) { _, keepOn in
@@ -219,6 +229,12 @@ struct ReaderView: View {
                 }
                 .disabled(next == nil)
                 .accessibilityLabel("Next section or bookmark")
+                Spacer()
+                Button { showingMedia = true } label: {
+                    Image(systemName: "photo.on.rectangle.angled")
+                }
+                .disabled(document.images.isEmpty)
+                .accessibilityLabel("Browse images")
             }
         }
         ToolbarItem(placement: .principal) {
