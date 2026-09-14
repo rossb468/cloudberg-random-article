@@ -4,6 +4,7 @@ struct ArticleListView: View {
     @Environment(\.openArticle) private var openArticle
     @AppStorage("articleList.sort") private var sort: ArticleSort = .newest
     @State private var searchText = ""
+    @State private var webPage: IdentifiableURL?
 
     private let articles = ArticleStore.all
 
@@ -19,6 +20,10 @@ struct ArticleListView: View {
                                 ArticleRow(article: article)
                             }
                             .swipeActions(edge: .trailing) { offlineSwipeAction(for: article) }
+                            .contextMenu {
+                                Button("Read", systemImage: "book") { openArticle(article) }
+                                RedditDiscussionMenuItems(article: article) { webPage = IdentifiableURL(url: $0) }
+                            }
                             .listRowBackground(Theme.background)
                             .listRowSeparatorTint(Theme.border)
                         }
@@ -42,6 +47,9 @@ struct ArticleListView: View {
             .navigationTitle("Articles")
             .toolbarBackground(Theme.background, for: .navigationBar)
             .searchable(text: $searchText, prompt: "Search \(articles.count) articles")
+            .sheet(item: $webPage) { page in
+                SafariView(url: page.url).ignoresSafeArea()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {

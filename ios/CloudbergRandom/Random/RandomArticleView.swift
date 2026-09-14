@@ -90,6 +90,8 @@ struct RandomArticleView: View {
                 }
 
                 actions(for: article)
+
+                RedditDiscussionLink(article: article) { safariTarget = IdentifiableURL(url: $0) }
             }
             .padding(20)
         }

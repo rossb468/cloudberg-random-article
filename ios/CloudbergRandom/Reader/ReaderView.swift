@@ -263,6 +263,7 @@ struct ReaderView: View {
                     Button("Open on Medium", systemImage: "safari") { open(url) }
                     ShareLink(item: url, subject: Text(article.title))
                 }
+                RedditDiscussionMenuItems(article: article, open: open)
             } label: {
                 Image(systemName: "ellipsis.circle")
             }
