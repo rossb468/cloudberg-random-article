@@ -69,6 +69,21 @@ struct ReaderDocumentTests {
         }
     }
 
+    @Test func dividerRulesMergeIntoOneSectionBreak() {
+        let post = MediumPost(id: "post", title: "Title", paragraphs: [
+            paragraph("p0", .paragraph, "Before the break."),
+            paragraph("d1", .paragraph, "◊◊◊"),
+            paragraph("d2", .paragraph, "________________________"),
+            paragraph("p3", .paragraph, "After the break."),
+            paragraph("q", .paragraph, "“...”"),
+        ], fetchedAt: .now)
+        let doc = ReaderDocument(post: post, title: "Title")
+        let sections = doc.landmarks.filter { $0.kind == .section }
+        #expect(sections.map(\.blockID) == ["d1"])
+        #expect(sections.first?.title == "After the break.")
+        #expect(doc.blocks.map(\.id) == ["p0", "d1", "p3", "q"])
+    }
+
     @Test func excerptsTrimAtWordBoundaries() {
         let long = String(repeating: "word ", count: 40)
         #expect(ReaderDocument.openingWords(long, limit: 22) == "word word word word…")

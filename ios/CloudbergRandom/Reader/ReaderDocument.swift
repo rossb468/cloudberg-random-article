@@ -53,6 +53,13 @@ struct ReaderDocument {
 
     /// Paragraph texts that mark a section break in Admiral Cloudberg's articles.
     static let sectionBreakMarkers: Set<String> = ["◊◊◊", "◊ ◊ ◊", "***", "* * *"]
+    /// "◊◊◊" and friends, or a rule drawn with divider characters (underscores,
+    /// dashes). Not other punctuation-only lines, like a transcript's “...”.
+    static func isSectionBreak(_ text: String) -> Bool {
+        sectionBreakMarkers.contains(text)
+            || (text.count >= 3 && text.allSatisfy { "_-–—=*◊·•~ ".contains($0) })
+    }
+
     /// Plain paragraphs that act as headings.
     static let headingLikeParagraphs: Set<String> = ["Bibliography", "Sources", "References", "Notes"]
 
@@ -76,7 +83,9 @@ struct ReaderDocument {
                 append(.text(.heading, text, paragraph.markups), id: paragraph.id)
             case .subheading:
                 append(.text(.subheading, text, paragraph.markups), id: paragraph.id)
-            case .paragraph where Self.sectionBreakMarkers.contains(text):
+            case .paragraph where Self.isSectionBreak(text):
+                // "◊◊◊" is sometimes followed by a rule of underscores; one break is enough.
+                if case .sectionBreak? = blocks.last?.content { continue }
                 append(.sectionBreak, id: paragraph.id)
             case .paragraph where Self.headingLikeParagraphs.contains(text):
                 append(.text(.heading, text, []), id: paragraph.id)
