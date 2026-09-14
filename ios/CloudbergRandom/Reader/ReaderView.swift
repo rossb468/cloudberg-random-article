@@ -14,6 +14,14 @@ struct ReaderView: View {
     @State private var galleryStart: ReaderDocument.Image?
     @State private var scrollTarget: String?
 
+    // Reading position
+    @State private var topBlockID: String?
+    @State private var detector = JumpDetector()
+    @State private var returnOffer: JumpDetector.Jump?
+    @State private var resumeOffer: ReadingState?
+    /// Moves we make on the reader's behalf (resume, go back) aren't jumps.
+    @State private var ignoreJumpsUntil = Date.distantPast
+
     var body: some View {
         NavigationStack {
             Group {
@@ -84,6 +92,24 @@ struct ReaderView: View {
             .padding(.vertical, 20)
             .frame(maxWidth: .infinity)
         }
+        .scrollPosition(id: $topBlockID, anchor: .top)
+        .onChange(of: topBlockID) { _, blockID in
+            positionChanged(to: blockID, in: document)
+        }
+        .overlay(alignment: .bottom) { positionOffers(document) }
+        .task {
+            // Let positions settle while the reader isn't scrolling.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(500))
+                detector.tick(at: .now)
+                saveSettledPosition(in: document)
+            }
+        }
+        .task(id: returnOffer) {
+            guard returnOffer != nil else { return }
+            try? await Task.sleep(for: .seconds(12))
+            withAnimation { returnOffer = nil }
+        }
         .onChange(of: scrollTarget) { _, target in
             guard let target else { return }
             withAnimation { proxy.scrollTo(target, anchor: .top) }
@@ -149,6 +175,14 @@ struct ReaderView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            if let document, let topBlockID {
+                Text("\(Int((document.progress(at: topBlockID) * 100).rounded()))%")
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(settings.palette.secondaryText)
+                    .accessibilityLabel("\(Int((document.progress(at: topBlockID) * 100).rounded())) percent read")
+            }
+        }
         ToolbarItem(placement: .topBarLeading) {
             Button { dismiss() } label: {
                 Image(systemName: "xmark")
@@ -178,17 +212,93 @@ struct ReaderView: View {
     private func load() async {
         do {
             let post = try await library.post(for: article)
-            document = ReaderDocument(post: post, title: article.title)
+            let document = ReaderDocument(post: post, title: article.title)
+            self.document = document
+            let saved = ReadingStateStore.shared.state(for: article.postID)
+            if let blockID = saved.blockID, document.index(of: blockID) != nil, saved.progress > 0.02 {
+                resumeOffer = saved
+            }
             #if DEBUG
             // `-debugOpenImage N` opens the gallery at the Nth image.
             let imageNumber = UserDefaults.standard.integer(forKey: "debugOpenImage")
-            if let document, document.images.indices.contains(imageNumber - 1) {
+            if document.images.indices.contains(imageNumber - 1) {
                 galleryStart = document.images[imageNumber - 1]
             }
             #endif
         } catch {
             loadError = error.localizedDescription
         }
+    }
+
+    // MARK: - Reading position
+
+    @ViewBuilder
+    private func positionOffers(_ document: ReaderDocument) -> some View {
+        Group {
+            if let returnOffer {
+                ReturnPill(jump: returnOffer, palette: settings.palette) {
+                    move(to: returnOffer.fromBlockID)
+                } onDismiss: {
+                    self.returnOffer = nil
+                }
+            } else if let resumeOffer, let blockID = resumeOffer.blockID {
+                ResumeBanner(progress: resumeOffer.progress, palette: settings.palette) {
+                    move(to: blockID)
+                } onDismiss: {
+                    self.resumeOffer = nil
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 12)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .animation(.spring(duration: 0.35), value: returnOffer)
+        .animation(.spring(duration: 0.35), value: resumeOffer)
+    }
+
+    private func positionChanged(to blockID: String?, in document: ReaderDocument) {
+        guard let blockID else { return }
+        let progress = document.progress(at: blockID)
+        let now = Date.now
+
+        if now < ignoreJumpsUntil {
+            // Start fresh from wherever we were moved to.
+            detector = JumpDetector()
+            _ = detector.update(blockID: blockID, progress: progress, at: now)
+        } else if let jump = detector.update(blockID: blockID, progress: progress, at: now) {
+            withAnimation { returnOffer = jump }
+        }
+
+        if let offer = returnOffer, abs(progress - offer.fromProgress) < 0.02 {
+            withAnimation { returnOffer = nil }
+        }
+        if resumeOffer != nil, progress > 0.1 {
+            withAnimation { resumeOffer = nil }
+        }
+    }
+
+    /// Only settled positions are saved, so an accidental jump right before
+    /// closing the article doesn't lose your place.
+    private func saveSettledPosition(in document: ReaderDocument) {
+        guard let settled = detector.settled else { return }
+        var state = ReadingStateStore.shared.state(for: article.postID)
+        guard state.blockID != settled.blockID else { return }
+        // Don't overwrite a saved position with the top of the article while the
+        // resume offer is still up.
+        if resumeOffer != nil && settled.progress < 0.02 { return }
+        state.blockID = settled.blockID
+        state.progress = settled.progress
+        state.updatedAt = .now
+        ReadingStateStore.shared.save(state, for: article.postID)
+    }
+
+    private func move(to blockID: String) {
+        ignoreJumpsUntil = .now.addingTimeInterval(1.5)
+        withAnimation {
+            returnOffer = nil
+            resumeOffer = nil
+        }
+        scrollTarget = blockID
     }
 
     private func open(_ url: URL) {
