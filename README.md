@@ -1,49 +1,99 @@
 # Random Admiral Cloudberg
 
-An app (web + iOS) that serves up a random article from [Admiral Cloudberg](https://admiralcloudberg.medium.com)'s aviation (and other) disaster deep-dives on Medium. Tap the button, get a new random pick; tap "Read full article" to open it on Medium.
+An unofficial reader for [Admiral Cloudberg](https://admiralcloudberg.medium.com)'s aviation (and other) disaster deep-dives on Medium, as a native iOS app plus a small web page.
 
-There are two versions of the app, sharing the same underlying article data: a static web app in [`app/`](app), and a native SwiftUI iOS app in [`ios/`](ios).
+- **iOS app** ([`ios/`](ios)) — browse and read the whole archive: a random-article picker, a searchable list with engagement stats, offline downloads, a customizable reader, and links to each article's Reddit discussion.
+- **Web app** ([`app/`](app)) — the original one-page random-article picker.
 
-## How it works
+## iOS app
 
-- [`app/data.js`](app/data.js) is a pre-built, static list of every real article Admiral Cloudberg has published on Medium (title, subtitle, cover image, word count, reading time, publish date, and URL). It was generated once by paginating through Medium's internal profile API and filtering out short comment/reply posts that aren't real articles. [`ios/CloudbergRandom/Resources/articles.json`](ios/CloudbergRandom/Resources/articles.json) is the same data set, converted to plain JSON and bundled into the iOS app. Neither app makes any API calls at runtime.
-- The web app ([`app/index.html`](app/index.html) + [`app/app.js`](app/app.js)) and the iOS app ([`ios/CloudbergRandom`](ios/CloudbergRandom)) both just pick a random entry from that list and render it, then swap in a new one on tap. No build step, no backend.
-- "Read full article" opens the real article on Medium (in a new browser tab on web, in an in-app Safari view on iOS), since Medium doesn't allow its articles to be embedded elsewhere.
+Open [`ios/CloudbergRandom.xcodeproj`](ios/CloudbergRandom.xcodeproj) in Xcode and run the `CloudbergRandom` scheme. There are no package dependencies. To run on a device, pick your team under the target's Signing & Capabilities.
 
-## Running the web app
+From the command line:
 
-**Easiest way:**
+```bash
+xcodebuild test -project ios/CloudbergRandom.xcodeproj -scheme CloudbergRandom -destination 'platform=iOS Simulator,name=iPhone 17'
+```
+
+### Features
+
+- **Random** — a random article card, as in the web app.
+- **Articles** — every article, searchable by title and subtitle, sorted by date, title, length, or engagement (overall, claps, Reddit upvotes, or comments). Swipe to download; long-press for the Reddit discussion and engagement stats.
+- **Library** — download every article (text, and optionally images — about 550 MB in total) for offline reading, with progress, retry, and storage used. Any article you open is saved for offline reading as well.
+- **Reader** — articles are parsed out of Medium's pages and laid out natively:
+  - Reading preferences: seven color themes (including custom colors), nine typefaces, text size, line and paragraph spacing, margins, line width, justification, hyphenation, first-line indents, and keep-screen-on.
+  - Full-screen image viewer with swipe, pinch and double-tap zoom, and share / save to Photos / copy.
+  - Saved reading position with an offer to resume, and a "Back to 42%" pill whenever the position jumps far away (a status-bar tap, a hard fling, or navigating somewhere).
+  - Bookmarks, and up/down buttons that step between bookmarks and sections (Admiral Cloudberg marks sections with "◊◊◊"); a contents sheet with a position scrubber.
+  - A media browser showing all of an article's images and captions, grouped by section.
+- **Reddit** — each article links to where it was posted on r/CatastrophicFailure.
+- **Engagement stats** — Medium claps and responses plus Reddit upvotes, upvote ratio and comments, with each article's rank in the archive.
+
+### Where the data comes from
+
+| Data | Source | Stored in the repo? |
+| --- | --- | --- |
+| Article list, claps, responses | Medium article pages ([`scripts/update-catalog.swift`](scripts/update-catalog.swift)) | Yes: metadata only, in `Resources/articles.json` |
+| Article text and images | Medium, fetched by the app | **No**: downloaded on-device only |
+| Reddit posts, scores, comment counts | [Arctic Shift](https://arctic-shift.photon-reddit.com) Reddit archive ([`scripts/update-reddit-index.py`](scripts/update-reddit-index.py)) | Yes, in `Resources/reddit.json` |
+
+Medium's page data is read from the Apollo cache Medium embeds in each page (`window.__APOLLO_STATE__`). Medium blocks curl and Python's HTTP clients but accepts Apple's `URLSession`, which is why the catalog script is Swift.
+
+Reddit's API rejects unauthenticated clients, so Reddit numbers come from the Arctic Shift archive, which records each post about a day and a half after it's made. They reflect a post's first couple of days, not live totals. Medium numbers in the bundled catalog are refreshed whenever the app fetches an article page, or for every article via *Update Medium Stats* in the Articles sort menu.
+
+### Updating the bundled data
+
+```bash
+swift scripts/update-catalog.swift --cache-dir /tmp/medium-pages
+```
+
+```bash
+python3 scripts/update-reddit-index.py
+```
+
+Run the catalog script first: the Reddit index is keyed by the article list. `--cache-dir` is optional and saves fetched pages so a re-run doesn't refetch them.
+
+### Code layout
+
+| Folder | Contents |
+| --- | --- |
+| `App/` | App entry point, tab bar, and the `openArticle` action screens use to open articles |
+| `Catalog/` | `Article` and the bundled catalog |
+| `Random/` | Random article card |
+| `ArticleList/` | Article list, search and sorting |
+| `Offline/` | Medium page fetching and parsing, offline library, image loading, Library tab |
+| `Reader/` | Reader document model, typesetting, reader UI, settings, image viewer, position, bookmarks, media browser |
+| `Reddit/` | Reddit discussion index and links |
+| `Stats/` | Engagement stats, ranking, stats UI |
+
+The project uses folder-synchronized groups, so new files in these folders are picked up without editing `project.pbxproj`.
+
+Debug builds accept launch arguments for jumping straight to a screen, which is handy in the simulator: `-rootTab articles|library`, `-debugOpenArticle <postID>`, `-debugOpenImage N`, `-debugShowReaderSettings YES`, `-debugShowReaderPanel contents|media|stats`, and `-debugDownloadNewest N`.
+
+## Web app
 
 ```bash
 ./run.sh
 ```
 
-This starts a local web server for the `app/` folder and opens it in your default browser. Press `Ctrl+C` in the terminal to stop the server when you're done.
+This serves `app/` locally and opens it in your default browser (Ctrl+C to stop). Or serve it yourself with `cd app && python3 -m http.server 8743`, or just open `app/index.html`. It reads the same catalog as the iOS app, from `app/data.js`.
 
-**Manually:**
+## Git history
 
-```bash
-cd app
-python3 -m http.server 8743
-```
+Each feature was built on its own branch and merged into `main` with a merge commit, so a feature's changes can be reviewed with `git log main^1..<merge>` or backed out with `git revert -m 1 <merge>`:
 
-then open `http://localhost:8743` in a browser. You can also just double-click `app/index.html` to open it directly, with no server at all.
+| Branch | Feature |
+| --- | --- |
+| `chore/project-setup` | Project restructure and test target |
+| `feature/article-list` | Master list of all articles; catalog refresh script |
+| `feature/offline-library` | Download all articles for offline reading |
+| `feature/reader` | Native reader: preferences, image viewer, position, bookmarks, media browser |
+| `feature/reddit-discussions` | Links to each article's r/CatastrophicFailure discussion |
+| `fix/random-card-layout` | Keep the random card on narrow screens |
+| `feature/engagement-stats` | Engagement stats and sorting |
 
-## Running the iOS app
-
-Open [`ios/CloudbergRandom.xcodeproj`](ios/CloudbergRandom.xcodeproj) in Xcode, pick an iPhone simulator (or a signed-in device), and hit Run. It's a plain SwiftUI app with no external dependencies or package requirements — no CocoaPods, no SPM packages, nothing to fetch before it'll build.
-
-From the command line:
-
-```bash
-xcodebuild -project ios/CloudbergRandom.xcodeproj -scheme CloudbergRandom \
-  -destination 'platform=iOS Simulator,name=iPhone 16' build
-```
-
-## Updating the article list
-
-`app/data.js` (and its iOS counterpart, `ios/CloudbergRandom/Resources/articles.json`) are point-in-time snapshots, so they won't include articles published after they were generated. To refresh them, the article data needs to be re-pulled from Medium's profile stream API for the account and re-filtered for real articles (as opposed to short reply/comment posts), then saved back into `app/data.js` as `window.ARTICLES = [...]` and re-exported as JSON for the iOS app.
+Later features build on earlier ones (for example, stats sort the article list and read Reddit data), so reverting an early feature may require reverting the ones after it.
 
 ## Credit
 
-All article content and images belong to Admiral Cloudberg (Kyra Dempsey). This project is just an unofficial random-article picker linking out to her work — it doesn't republish or host any article text.
+All article content and images belong to Admiral Cloudberg (Kyra Dempsey). This project is an unofficial reader: the repository contains only article metadata, and article text and images are downloaded by the app onto your device from Medium.
