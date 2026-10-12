@@ -8,6 +8,7 @@ struct RandomArticleView: View {
     @State private var currentIndex: Int = -1
     @State private var lastIndex: Int = -1
     @State private var safariTarget: IdentifiableURL?
+    @State private var statsArticle: Article?
 
     var body: some View {
         ZStack {
@@ -41,6 +42,10 @@ struct RandomArticleView: View {
         }
         .onAppear {
             if currentIndex == -1 { showRandomArticle() }
+        }
+        .sheet(item: $statsArticle) { article in
+            ArticleStatsView(article: article)
+                .presentationDetents([.medium, .large])
         }
         .sheet(item: $safariTarget) { target in
             SafariView(url: target.url)
@@ -102,6 +107,14 @@ struct RandomArticleView: View {
                 .stroke(Theme.border, lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.4), radius: 24, y: 12)
+        .contextMenu {
+            ArticleActionsMenu(
+                article: article,
+                onRead: { openArticle(article) },
+                onOpenURL: { safariTarget = IdentifiableURL(url: $0) },
+                onShowStats: { statsArticle = article }
+            )
+        }
     }
 
     private func cover(for article: Article) -> some View {
