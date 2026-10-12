@@ -16,6 +16,10 @@ struct ReaderView: View {
 
     // Reading position
     @State private var topBlockID: String?
+    /// Continuous scroll progress, which updates far more often than the top
+    /// paragraph changes.
+    @State private var scrollProgress: Double?
+
     @State private var detector = JumpDetector()
     @State private var returnOffer: JumpDetector.Jump?
     @State private var resumeOffer: ReadingState?
@@ -116,7 +120,6 @@ struct ReaderView: View {
     // MARK: - Content
 
     private func articleBody(_ document: ReaderDocument) -> some View {
-        ScrollViewReader { proxy in
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 header
@@ -137,6 +140,9 @@ struct ReaderView: View {
             .frame(maxWidth: .infinity)
         }
         .scrollPosition(id: $topBlockID, anchor: .top)
+        .onReaderScrollProgress { progress in
+            scrollProgress = progress
+        }
         .onChange(of: topBlockID) { _, blockID in
             positionChanged(to: blockID, in: document)
         }
@@ -156,9 +162,12 @@ struct ReaderView: View {
         }
         .onChange(of: scrollTarget) { _, target in
             guard let target else { return }
-            withAnimation { proxy.scrollTo(target, anchor: .top) }
+            // Moving the scroll position binding (rather than a ScrollViewReader
+            // proxy) keeps the percentage and jump detection in step with the
+            // jump instead of waiting for the scroll to settle.
+            if scrollProgress == nil { scrollProgress = document.progress(at: target) }
+            withAnimation { topBlockID = target }
             scrollTarget = nil
-        }
         }
     }
 
@@ -252,11 +261,13 @@ struct ReaderView: View {
             }
         }
         ToolbarItem(placement: .principal) {
-            if let document, let topBlockID {
-                Text("\(Int((document.progress(at: topBlockID) * 100).rounded()))%")
+            if let percent = readPercentage {
+                Text("\(percent)%")
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(settings.palette.secondaryText)
-                    .accessibilityLabel("\(Int((document.progress(at: topBlockID) * 100).rounded())) percent read")
+                    .contentTransition(.numericText())
+                    .animation(.default, value: percent)
+                    .accessibilityLabel("\(percent) percent read")
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
@@ -290,6 +301,18 @@ struct ReaderView: View {
             if let blockID = saved.blockID, document.index(of: blockID) != nil, saved.progress > 0.02 {
                 resumeOffer = saved
             }
+            #if DEBUG
+            // `-debugJumpToProgress 42` jumps as resuming would, for checking
+            // that the percentage follows.
+            let jumpPercent = UserDefaults.standard.integer(forKey: "debugJumpToProgress")
+            if jumpPercent > 0 {
+                // After the scroll view exists, so the jump isn't missed.
+                Task {
+                    try? await Task.sleep(for: .milliseconds(800))
+                    scrollTarget = document.blockID(atProgress: Double(jumpPercent) / 100)
+                }
+            }
+            #endif
             #if DEBUG
             // `-debugOpenImage N` opens the gallery at the Nth image.
             let imageNumber = UserDefaults.standard.integer(forKey: "debugOpenImage")
@@ -342,14 +365,14 @@ struct ReaderView: View {
         Group {
             if let returnOffer {
                 ReturnPill(jump: returnOffer, palette: settings.palette) {
-                    move(to: returnOffer.fromBlockID)
+                    move(to: returnOffer.fromBlockID, in: document)
                 } onDismiss: {
                     self.returnOffer = nil
                     returnOfferIsSticky = false
                 }
             } else if let resumeOffer, let blockID = resumeOffer.blockID {
                 ResumeBanner(progress: resumeOffer.progress, palette: settings.palette) {
-                    move(to: blockID)
+                    move(to: blockID, in: document)
                 } onDismiss: {
                     self.resumeOffer = nil
                 }
@@ -362,9 +385,17 @@ struct ReaderView: View {
         .animation(.spring(duration: 0.35), value: resumeOffer)
     }
 
+    /// Percentage read, from the live scroll position when it's known.
+    private var readPercentage: Int? {
+        guard let progress = scrollProgress ?? document.flatMap({ document in
+            topBlockID.map { document.progress(at: $0) }
+        }) else { return nil }
+        return Int((progress * 100).rounded())
+    }
+
     private func positionChanged(to blockID: String?, in document: ReaderDocument) {
         guard let blockID else { return }
-        let progress = document.progress(at: blockID)
+        let progress = scrollProgress ?? document.progress(at: blockID)
         let now = Date.now
 
         if now < ignoreJumpsUntil {
@@ -395,7 +426,7 @@ struct ReaderView: View {
     /// is, even if you scrolled there a moment ago.
     private func saveCurrentPosition(in document: ReaderDocument) {
         guard let blockID = topBlockID ?? detector.settled?.blockID else { return }
-        savePosition(blockID: blockID, progress: document.progress(at: blockID))
+        savePosition(blockID: blockID, progress: scrollProgress ?? document.progress(at: blockID))
     }
 
     private func savePosition(blockID: String, progress: Double) {
@@ -410,7 +441,7 @@ struct ReaderView: View {
         ReadingStateStore.shared.save(state, for: article.postID)
     }
 
-    private func move(to blockID: String) {
+    private func move(to blockID: String, in document: ReaderDocument) {
         ignoreJumpsUntil = .now.addingTimeInterval(1.5)
         withAnimation {
             returnOffer = nil
