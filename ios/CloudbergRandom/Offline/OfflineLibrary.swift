@@ -42,6 +42,8 @@ final class OfflineLibrary {
 
     private let client: MediumClient
     private var batchTask: Task<Void, Never>?
+    private var sizeRefreshTask: Task<Void, Never>?
+    private var sizeRefreshPending = false
 
     nonisolated static let rootDirectory: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -178,6 +180,7 @@ final class OfflineLibrary {
                 try await downloadImages(of: post)
             }
             activity[id] = nil
+            refreshStorageSize()
         } catch is CancellationError {
             activity[id] = nil
         } catch let error as URLError where error.code == .cancelled {
@@ -238,10 +241,24 @@ final class OfflineLibrary {
         savedPostIDs.insert(post.id)
     }
 
+    /// Measures the download folder. Requests made while a measurement is
+    /// running coalesce into a single repeat afterwards, so the figure keeps up
+    /// during a download without rescanning thousands of files for every
+    /// article.
     private func refreshStorageSize() {
-        Task.detached(priority: .utility) {
-            let size = Self.directorySize(Self.rootDirectory)
-            await MainActor.run { self.storageBytes = size }
+        guard sizeRefreshTask == nil else {
+            sizeRefreshPending = true
+            return
+        }
+        sizeRefreshTask = Task {
+            storageBytes = await Task.detached(priority: .utility) {
+                Self.directorySize(Self.rootDirectory)
+            }.value
+            sizeRefreshTask = nil
+            if sizeRefreshPending {
+                sizeRefreshPending = false
+                refreshStorageSize()
+            }
         }
     }
 

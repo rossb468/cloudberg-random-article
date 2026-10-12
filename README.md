@@ -19,7 +19,7 @@ xcodebuild test -project ios/CloudbergRandom.xcodeproj -scheme CloudbergRandom -
 
 - **Random** — a random article card, as in the web app.
 - **Articles** — every article, searchable by title and subtitle, sorted by date, title, length, or engagement (overall, claps, Reddit upvotes, or comments). Swipe to download; long-press for the Reddit discussion and engagement stats.
-- **Library** — download every article (text, and optionally images — about 550 MB in total) for offline reading, with progress, retry, and storage used. Any article you open is saved for offline reading as well.
+- **Library** — download every article (text, and optionally images — about 3 GB in total) for offline reading, with progress, retry, and storage used. Any article you open is saved for offline reading as well.
 - **Reader** — articles are parsed out of Medium's pages and laid out natively:
   - Reading preferences: seven color themes (including custom colors), nine typefaces, text size, line and paragraph spacing, margins, line width, justification, hyphenation, first-line indents, and keep-screen-on.
   - Full-screen image viewer with swipe, pinch and double-tap zoom, and share / save to Photos / copy.
