@@ -162,6 +162,7 @@ struct ArticleListView: View {
 struct ArticleRow: View {
     let article: Article
     @Environment(EngagementStore.self) private var engagement
+    @Environment(ReadingStateStore.self) private var reading
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -188,6 +189,7 @@ struct ArticleRow: View {
                 .font(.caption)
                 .foregroundColor(Theme.textDim)
                 ArticleStatsLine(stats: engagement.stats(for: article))
+                ReadingProgressLine(progress: reading.progress(for: article.postID))
             }
             Spacer(minLength: 0)
             OfflineStatusIcon(article: article)
@@ -202,5 +204,39 @@ struct ArticleRow: View {
     ArticleListView()
         .environment(OfflineLibrary.shared)
         .environment(EngagementStore.shared)
+        .environment(ReadingStateStore.shared)
         .preferredColorScheme(.dark)
+}
+
+/// How far through an article you are, for articles you've started.
+struct ReadingProgressLine: View {
+    let progress: Double?
+
+    private static let barWidth: CGFloat = 54
+
+    var body: some View {
+        if let progress, progress > 0.02 {
+            if progress >= 0.97 {
+                Label("Finished", systemImage: "checkmark.circle.fill")
+                    .font(.caption2)
+                    .foregroundColor(Theme.accent)
+            } else {
+                HStack(spacing: 6) {
+                    Capsule()
+                        .fill(Theme.border)
+                        .frame(width: Self.barWidth, height: 3)
+                        .overlay(alignment: .leading) {
+                            Capsule()
+                                .fill(Theme.accent)
+                                .frame(width: Self.barWidth * progress, height: 3)
+                        }
+                    Text("\(Int((progress * 100).rounded()))% read")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundColor(Theme.accent)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(Int((progress * 100).rounded())) percent read")
+            }
+        }
+    }
 }

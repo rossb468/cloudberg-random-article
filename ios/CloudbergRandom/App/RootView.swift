@@ -28,6 +28,7 @@ struct RootView: View {
         .tint(Theme.accent)
         .environment(OfflineLibrary.shared)
         .environment(EngagementStore.shared)
+        .environment(ReadingStateStore.shared)
         #if DEBUG
         .task {
             // `-debugDownloadNewest N` downloads the newest N articles at launch,
