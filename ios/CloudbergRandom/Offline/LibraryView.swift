@@ -16,7 +16,7 @@ struct LibraryView: View {
                     Toggle("Include images", isOn: $library.includeImages)
                         .tint(Theme.accent)
                 } footer: {
-                    Text("Images take up most of the space — about 550 MB for the whole archive. Without them, articles are still fully readable offline, with image placeholders.")
+                    Text("Images take up nearly all of the space — about 3 GB for the whole archive. Without them downloads are a small fraction of that, and articles are still fully readable offline, with image placeholders.")
                 }
                 .listRowBackground(Theme.card)
 
