@@ -23,9 +23,12 @@ struct ArticleListView: View {
                         }
                         .swipeActions(edge: .trailing) { offlineSwipeAction(for: article) }
                         .contextMenu {
-                            Button("Read", systemImage: "book") { openArticle(article) }
-                            RedditDiscussionMenuItems(article: article) { webPage = IdentifiableURL(url: $0) }
-                            Button("Engagement Stats", systemImage: "chart.bar") { statsArticle = article }
+                            ArticleActionsMenu(
+                                article: article,
+                                onRead: { openArticle(article) },
+                                onOpenURL: { webPage = IdentifiableURL(url: $0) },
+                                onShowStats: { statsArticle = article }
+                            )
                         }
                         .listRowBackground(Theme.background)
                         .listRowSeparatorTint(Theme.border)

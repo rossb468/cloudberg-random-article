@@ -267,12 +267,11 @@ struct ReaderView: View {
         }
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
-                if let url = article.webURL {
-                    Button("Open on Medium", systemImage: "safari") { open(url) }
-                    ShareLink(item: url, subject: Text(article.title))
-                }
-                RedditDiscussionMenuItems(article: article, open: open)
-                Button("Engagement Stats", systemImage: "chart.bar") { showingStats = true }
+                ArticleActionsMenu(
+                    article: article,
+                    onOpenURL: open,
+                    onShowStats: { showingStats = true }
+                )
             } label: {
                 Image(systemName: "ellipsis.circle")
             }
