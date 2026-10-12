@@ -18,9 +18,9 @@ xcodebuild test -project ios/CloudbergRandom.xcodeproj -scheme CloudbergRandom -
 ### Features
 
 - **Random** — a random article card, as in the web app.
-- **Articles** — every article, searchable by title and subtitle, sorted by date, title, length, or engagement (overall, claps, Reddit upvotes, or comments). Swipe to download; long-press for the Reddit discussion and engagement stats.
+- **Articles** — every article, searchable by title and subtitle, sorted by date, title, length, or engagement (overall, claps, Reddit upvotes, or comments). Rows show how far through an article you are. Swipe to download, or long-press for the full set of actions: share, read, download, the Reddit discussion, engagement stats, and open on Medium.
 - **Downloads** — reached from the Articles toolbar: download every article (text, and optionally images — about 3 GB in total) for offline reading, with progress, retry, and storage used. Any article you open is saved for offline reading as well.
-- **Reader** — articles are parsed out of Medium's pages and laid out natively:
+- **Reader** — articles push onto the tab's navigation stack (so they swipe back), parsed out of Medium's pages and laid out natively, with percentage read in the toolbar:
   - Reading preferences: seven color themes (including custom colors), nine typefaces, text size, line and paragraph spacing, margins, line width, justification, hyphenation, first-line indents, and keep-screen-on.
   - Full-screen image viewer with swipe, pinch and double-tap zoom, and share / save to Photos / copy.
   - Saved reading position with an offer to resume, and a "Back to 42%" pill whenever the position jumps far away (a status-bar tap, a hard fling, or navigating somewhere).
@@ -68,7 +68,7 @@ Run the catalog script first: the Reddit index is keyed by the article list. `--
 
 The project uses folder-synchronized groups, so new files in these folders are picked up without editing `project.pbxproj`.
 
-Debug builds accept launch arguments for jumping straight to a screen, which is handy in the simulator: `-rootTab articles`, `-debugOpenArticle <postID>`, `-debugOpenImage N`, `-debugShowReaderSettings YES`, `-debugShowReaderPanel contents|media|stats`, and `-debugDownloadNewest N`.
+Debug builds accept launch arguments for jumping straight to a screen, which is handy in the simulator: `-rootTab articles`, `-debugOpenArticle <postID>`, `-debugOpenImage N`, `-debugShowReaderSettings YES`, `-debugShowReaderPanel contents|media|stats`, `-debugJumpToProgress N`, and `-debugDownloadNewest N`.
 
 ## Web app
 
