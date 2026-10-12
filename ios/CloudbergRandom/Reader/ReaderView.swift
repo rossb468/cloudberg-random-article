@@ -4,6 +4,7 @@ struct ReaderView: View {
     let article: Article
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(OfflineLibrary.self) private var library
     private let settings = ReaderSettings.shared
 
@@ -88,7 +89,14 @@ struct ReaderView: View {
         .onChange(of: settings.keepScreenOn) { _, keepOn in
             UIApplication.shared.isIdleTimerDisabled = keepOn
         }
-        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
+            if let document { saveCurrentPosition(in: document) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Leaving the app counts as putting the article down.
+            if phase != .active, let document { saveCurrentPosition(in: document) }
+        }
         .sheet(isPresented: $showingSettings) {
             ReaderSettingsView(settings: settings)
                 .presentationDetents([.medium, .large])
@@ -384,17 +392,28 @@ struct ReaderView: View {
         }
     }
 
-    /// Only settled positions are saved, so an accidental jump right before
-    /// closing the article doesn't lose your place.
+    /// While reading, only settled positions are saved, so an accidental jump
+    /// doesn't quietly become your saved place.
     private func saveSettledPosition(in document: ReaderDocument) {
         guard let settled = detector.settled else { return }
+        savePosition(blockID: settled.blockID, progress: settled.progress)
+    }
+
+    /// Closing the article (or leaving the app) saves exactly where the view
+    /// is, even if you scrolled there a moment ago.
+    private func saveCurrentPosition(in document: ReaderDocument) {
+        guard let blockID = topBlockID ?? detector.settled?.blockID else { return }
+        savePosition(blockID: blockID, progress: document.progress(at: blockID))
+    }
+
+    private func savePosition(blockID: String, progress: Double) {
         var state = ReadingStateStore.shared.state(for: article.postID)
-        guard state.blockID != settled.blockID else { return }
+        guard state.blockID != blockID else { return }
         // Don't overwrite a saved position with the top of the article while the
         // resume offer is still up.
-        if resumeOffer != nil && settled.progress < 0.02 { return }
-        state.blockID = settled.blockID
-        state.progress = settled.progress
+        if resumeOffer != nil && progress < 0.02 { return }
+        state.blockID = blockID
+        state.progress = progress
         state.updatedAt = .now
         ReadingStateStore.shared.save(state, for: article.postID)
     }
