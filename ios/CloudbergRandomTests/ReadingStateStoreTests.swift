@@ -33,6 +33,23 @@ struct ReadingStateStoreTests {
         #expect(restored.bookmarks.map(\.blockID) == ["p_12"])
     }
 
+    @Test func savingPublishesProgressForLists() async {
+        let (store, directory) = temporaryStore()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        var state = store.state(for: "abc123def456")
+        state.blockID = "p_42"
+        state.progress = 0.42
+        store.save(state, for: "abc123def456")
+        #expect(store.progress(for: "abc123def456") == 0.42)
+
+        // A later launch picks the same progress up off disk.
+        let reopened = ReadingStateStore(directory: directory)
+        await reopened.reloadProgress()
+        #expect(reopened.progress(for: "abc123def456") == 0.42)
+        #expect(reopened.progress(for: "unreadunread") == nil)
+    }
+
     @Test func articlesKeepSeparatePositions() {
         let (store, directory) = temporaryStore()
         defer { try? FileManager.default.removeItem(at: directory) }
