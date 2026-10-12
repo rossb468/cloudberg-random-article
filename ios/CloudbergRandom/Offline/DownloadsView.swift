@@ -1,7 +1,9 @@
 import SwiftUI
 
-struct LibraryView: View {
+/// Download management for the whole catalog, opened from the Articles tab.
+struct DownloadsView: View {
     @Environment(\.openArticle) private var openArticle
+    @Environment(\.dismiss) private var dismiss
     @Environment(OfflineLibrary.self) private var library
     @State private var confirmingRemoveAll = false
 
@@ -32,7 +34,10 @@ struct LibraryView: View {
                 if !downloaded.isEmpty {
                     Section("Available offline") {
                         ForEach(downloaded) { article in
-                            Button { openArticle(article) } label: {
+                            Button {
+                                dismiss()
+                                openArticle(article)
+                            } label: {
                                 OfflineArticleRow(article: article)
                             }
                             .swipeActions {
@@ -52,7 +57,13 @@ struct LibraryView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.background)
-            .navigationTitle("Library")
+            .navigationTitle("Downloads")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
             .confirmationDialog("Remove all downloaded articles?", isPresented: $confirmingRemoveAll, titleVisibility: .visible) {
                 Button("Remove All", role: .destructive) { library.removeAll() }
             } message: {
@@ -86,7 +97,7 @@ struct LibraryView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(Theme.accent)
-                Text("Keep Cloudberg open while downloading — the screen won't lock.")
+                Text("Keep Cloudberg open while downloading — the screen won't lock. You can close this sheet; downloads keep going.")
                     .font(.caption)
                     .foregroundColor(Theme.textDim)
             } else if complete < articles.count {

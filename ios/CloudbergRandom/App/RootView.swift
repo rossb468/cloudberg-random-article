@@ -24,14 +24,6 @@ struct RootView: View {
             .environment(\.openArticle, OpenArticleAction { articlesPath.append($0) })
             .tabItem { Label("Articles", systemImage: "list.bullet") }
             .tag("articles")
-
-            LibraryView()
-                .environment(\.openArticle, OpenArticleAction { article in
-                    selectedTab = "articles"
-                    articlesPath.append(article)
-                })
-                .tabItem { Label("Library", systemImage: "arrow.down.circle") }
-                .tag("library")
         }
         .tint(Theme.accent)
         .environment(OfflineLibrary.shared)
