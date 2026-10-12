@@ -6,6 +6,7 @@ struct ArticleListView: View {
     @State private var searchText = ""
     @State private var webPage: IdentifiableURL?
     @State private var statsArticle: Article?
+    @State private var showingDownloads = false
     @Environment(EngagementStore.self) private var engagement
 
     private let articles = ArticleStore.all
@@ -56,6 +57,9 @@ struct ArticleListView: View {
             ArticleStatsView(article: article)
                 .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showingDownloads) {
+            DownloadsView()
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 if engagement.isRefreshing {
@@ -68,6 +72,12 @@ struct ArticleListView: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Updating Medium stats")
                 }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showingDownloads = true } label: {
+                    downloadsIcon
+                }
+                .accessibilityLabel("Downloads")
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -102,6 +112,22 @@ struct ArticleListView: View {
     }
 
     @Environment(OfflineLibrary.self) private var library
+
+    /// Shows how much of the catalog is downloaded, and progress while a
+    /// batch is running.
+    @ViewBuilder
+    private var downloadsIcon: some View {
+        let downloaded = library.downloadedCount(of: articles)
+        if library.isDownloadingAll {
+            ProgressView(value: Double(downloaded), total: Double(max(articles.count, 1)))
+                .progressViewStyle(.circular)
+                .tint(Theme.accent)
+        } else if downloaded == articles.count {
+            Image(systemName: "arrow.down.circle.fill")
+        } else {
+            Image(systemName: "arrow.down.circle")
+        }
+    }
 
     @ViewBuilder
     private func offlineSwipeAction(for article: Article) -> some View {
