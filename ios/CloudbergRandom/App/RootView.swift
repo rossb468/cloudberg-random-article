@@ -1,26 +1,41 @@
 import SwiftUI
 
 struct RootView: View {
-    @State private var openedArticle: Article?
+    // One navigation path per tab, so each tab keeps its own place.
+    @State private var randomPath: [Article] = []
+    @State private var articlesPath: [Article] = []
     // Remembers the last tab; also settable at launch with `-rootTab articles`.
     @AppStorage("rootTab") private var selectedTab = "random"
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            RandomArticleView()
-                .tabItem { Label("Random", systemImage: "dice") }
-                .tag("random")
-            ArticleListView()
-                .tabItem { Label("Articles", systemImage: "list.bullet") }
-                .tag("articles")
+            NavigationStack(path: $randomPath) {
+                RandomArticleView()
+                    .readerDestination()
+            }
+            .environment(\.openArticle, OpenArticleAction { randomPath.append($0) })
+            .tabItem { Label("Random", systemImage: "dice") }
+            .tag("random")
+
+            NavigationStack(path: $articlesPath) {
+                ArticleListView()
+                    .readerDestination()
+            }
+            .environment(\.openArticle, OpenArticleAction { articlesPath.append($0) })
+            .tabItem { Label("Articles", systemImage: "list.bullet") }
+            .tag("articles")
+
             LibraryView()
+                .environment(\.openArticle, OpenArticleAction { article in
+                    selectedTab = "articles"
+                    articlesPath.append(article)
+                })
                 .tabItem { Label("Library", systemImage: "arrow.down.circle") }
                 .tag("library")
         }
         .tint(Theme.accent)
         .environment(OfflineLibrary.shared)
         .environment(EngagementStore.shared)
-        .environment(\.openArticle, OpenArticleAction { openedArticle = $0 })
         #if DEBUG
         .task {
             // `-debugDownloadNewest N` downloads the newest N articles at launch,
@@ -28,15 +43,21 @@ struct RootView: View {
             let count = UserDefaults.standard.integer(forKey: "debugDownloadNewest")
             if count > 0 { OfflineLibrary.shared.downloadAll(Array(ArticleStore.all.suffix(count))) }
             // `-debugOpenArticle <postID>` opens an article in the reader at launch.
-            if let postID = UserDefaults.standard.string(forKey: "debugOpenArticle") {
-                openedArticle = ArticleStore.all.first { $0.postID == postID }
+            if let postID = UserDefaults.standard.string(forKey: "debugOpenArticle"),
+               let article = ArticleStore.all.first(where: { $0.postID == postID }) {
+                selectedTab == "random" ? randomPath.append(article) : articlesPath.append(article)
             }
         }
         #endif
-        .fullScreenCover(item: $openedArticle) { article in
+    }
+}
+
+private extension View {
+    /// Articles open by pushing onto the current tab's stack, so they can be
+    /// swiped back like any other pushed screen.
+    func readerDestination() -> some View {
+        navigationDestination(for: Article.self) { article in
             ReaderView(article: article)
-                .environment(OfflineLibrary.shared)
-                .environment(EngagementStore.shared)
         }
     }
 }

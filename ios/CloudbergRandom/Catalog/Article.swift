@@ -1,6 +1,6 @@
 import Foundation
 
-struct Article: Codable, Identifiable {
+struct Article: Codable, Identifiable, Hashable {
     let title: String
     let subtitle: String?
     let url: String

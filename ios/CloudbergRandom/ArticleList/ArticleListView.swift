@@ -11,93 +11,91 @@ struct ArticleListView: View {
     private let articles = ArticleStore.all
 
     var body: some View {
-        NavigationStack {
-            List {
-                ForEach(sections, id: \.title) { section in
-                    Section {
-                        ForEach(section.articles) { article in
-                            Button {
-                                openArticle(article)
-                            } label: {
-                                ArticleRow(article: article)
-                            }
-                            .swipeActions(edge: .trailing) { offlineSwipeAction(for: article) }
-                            .contextMenu {
-                                Button("Read", systemImage: "book") { openArticle(article) }
-                                RedditDiscussionMenuItems(article: article) { webPage = IdentifiableURL(url: $0) }
-                                Button("Engagement Stats", systemImage: "chart.bar") { statsArticle = article }
-                            }
-                            .listRowBackground(Theme.background)
-                            .listRowSeparatorTint(Theme.border)
+        List {
+            ForEach(sections, id: \.title) { section in
+                Section {
+                    ForEach(section.articles) { article in
+                        Button {
+                            openArticle(article)
+                        } label: {
+                            ArticleRow(article: article)
                         }
-                    } header: {
-                        if let title = section.title {
-                            Text(title)
-                                .font(.subheadline.bold())
-                                .foregroundColor(Theme.accent)
+                        .swipeActions(edge: .trailing) { offlineSwipeAction(for: article) }
+                        .contextMenu {
+                            Button("Read", systemImage: "book") { openArticle(article) }
+                            RedditDiscussionMenuItems(article: article) { webPage = IdentifiableURL(url: $0) }
+                            Button("Engagement Stats", systemImage: "chart.bar") { statsArticle = article }
                         }
+                        .listRowBackground(Theme.background)
+                        .listRowSeparatorTint(Theme.border)
+                    }
+                } header: {
+                    if let title = section.title {
+                        Text(title)
+                            .font(.subheadline.bold())
+                            .foregroundColor(Theme.accent)
                     }
                 }
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
-            .overlay {
-                if filtered.isEmpty {
-                    ContentUnavailableView.search(text: searchText)
-                }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Theme.background)
+        .overlay {
+            if filtered.isEmpty {
+                ContentUnavailableView.search(text: searchText)
             }
-            .navigationTitle("Articles")
-            .toolbarBackground(Theme.background, for: .navigationBar)
-            .searchable(text: $searchText, prompt: "Search \(articles.count) articles")
-            .sheet(item: $webPage) { page in
-                SafariView(url: page.url).ignoresSafeArea()
-            }
-            .sheet(item: $statsArticle) { article in
-                ArticleStatsView(article: article)
-                    .presentationDetents([.medium, .large])
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    if engagement.isRefreshing {
-                        HStack(spacing: 6) {
-                            ProgressView()
-                            Text("\(engagement.refreshProgress.done)/\(engagement.refreshProgress.total)")
-                                .font(.caption.monospacedDigit())
-                                .foregroundColor(Theme.textDim)
-                        }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel("Updating Medium stats")
+        }
+        .navigationTitle("Articles")
+        .toolbarBackground(Theme.background, for: .navigationBar)
+        .searchable(text: $searchText, prompt: "Search \(articles.count) articles")
+        .sheet(item: $webPage) { page in
+            SafariView(url: page.url).ignoresSafeArea()
+        }
+        .sheet(item: $statsArticle) { article in
+            ArticleStatsView(article: article)
+                .presentationDetents([.medium, .large])
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                if engagement.isRefreshing {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                        Text("\(engagement.refreshProgress.done)/\(engagement.refreshProgress.total)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundColor(Theme.textDim)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Updating Medium stats")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Picker("Sort", selection: $sort) {
-                            ForEach(ArticleSort.allCases.filter { !$0.isEngagement }) { option in
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Picker("Sort", selection: $sort) {
+                        ForEach(ArticleSort.allCases.filter { !$0.isEngagement }) { option in
+                            Label(option.label, systemImage: option.systemImage).tag(option)
+                        }
+                        Section("Engagement") {
+                            ForEach(ArticleSort.allCases.filter(\.isEngagement)) { option in
                                 Label(option.label, systemImage: option.systemImage).tag(option)
                             }
-                            Section("Engagement") {
-                                ForEach(ArticleSort.allCases.filter(\.isEngagement)) { option in
-                                    Label(option.label, systemImage: option.systemImage).tag(option)
-                                }
-                            }
                         }
-                        Section {
-                            if engagement.isRefreshing {
-                                Button("Stop Updating Medium Stats", systemImage: "stop.circle") {
-                                    engagement.cancelRefresh()
-                                }
-                            } else {
-                                Button("Update Medium Stats", systemImage: "arrow.clockwise") {
-                                    engagement.refreshMediumStats()
-                                }
-                            }
-                        } footer: {
-                            Text("Re-reads every article page from Medium for current claps and responses.")
-                        }
-                    } label: {
-                        Label("Sort", systemImage: "arrow.up.arrow.down")
                     }
+                    Section {
+                        if engagement.isRefreshing {
+                            Button("Stop Updating Medium Stats", systemImage: "stop.circle") {
+                                engagement.cancelRefresh()
+                            }
+                        } else {
+                            Button("Update Medium Stats", systemImage: "arrow.clockwise") {
+                                engagement.refreshMediumStats()
+                            }
+                        }
+                    } footer: {
+                        Text("Re-reads every article page from Medium for current claps and responses.")
+                    }
+                } label: {
+                    Label("Sort", systemImage: "arrow.up.arrow.down")
                 }
             }
         }

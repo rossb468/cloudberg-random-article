@@ -3,7 +3,6 @@ import SwiftUI
 struct ReaderView: View {
     let article: Article
 
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @Environment(OfflineLibrary.self) private var library
     private let settings = ReaderSettings.shared
@@ -33,22 +32,22 @@ struct ReaderView: View {
     @State private var showingStats = false
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if let document {
-                    articleBody(document)
-                } else if let loadError {
-                    failure(loadError)
-                } else {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
+        Group {
+            if let document {
+                articleBody(document)
+            } else if let loadError {
+                failure(loadError)
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .background(settings.palette.background.ignoresSafeArea())
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(settings.palette.background, for: .navigationBar, .bottomBar)
-            .toolbar { toolbar }
         }
+        .background(settings.palette.background.ignoresSafeArea())
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(settings.palette.background, for: .navigationBar, .bottomBar)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar { toolbar }
         .tint(settings.palette.accent)
         .preferredColorScheme(settings.palette.colorScheme)
         .task { await load() }
@@ -259,12 +258,6 @@ struct ReaderView: View {
                     .foregroundStyle(settings.palette.secondaryText)
                     .accessibilityLabel("\(Int((document.progress(at: topBlockID) * 100).rounded())) percent read")
             }
-        }
-        ToolbarItem(placement: .topBarLeading) {
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-            }
-            .accessibilityLabel("Close")
         }
         ToolbarItem(placement: .topBarTrailing) {
             Button { showingSettings = true } label: {
