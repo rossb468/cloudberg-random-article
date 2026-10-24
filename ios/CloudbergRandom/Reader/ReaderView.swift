@@ -22,7 +22,8 @@ struct ReaderView: View {
 
     @State private var detector = JumpDetector()
     @State private var returnOffer: JumpDetector.Jump?
-    @State private var resumeOffer: ReadingState?
+    /// The saved place to pick up from, until the reader has been moved there.
+    @State private var resumeBlockID: String?
     /// Moves we make on the reader's behalf (resume, go back) aren't jumps.
     @State private var ignoreJumpsUntil = Date.distantPast
     /// Set when the offer came from navigating (contents, bookmarks, stepping):
@@ -148,6 +149,15 @@ struct ReaderView: View {
         }
         .overlay(alignment: .bottom) { positionOffers(document) }
         .task {
+            // Pick up where you left off, once the scroll view is in place.
+            guard let blockID = resumeBlockID else { return }
+            await Task.yield()
+            ignoreJumpsUntil = .now.addingTimeInterval(1.5)
+            scrollProgress = document.progress(at: blockID)
+            topBlockID = blockID
+            resumeBlockID = nil
+        }
+        .task {
             // Let positions settle while the reader isn't scrolling.
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(500))
@@ -265,8 +275,9 @@ struct ReaderView: View {
                 Text("\(percent)%")
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(settings.palette.secondaryText)
-                    .contentTransition(.numericText())
-                    .animation(.default, value: percent)
+                    // Follows the scroll directly; any transition reads as flicker.
+                    .contentTransition(.identity)
+                    .transaction { $0.animation = nil }
                     .accessibilityLabel("\(percent) percent read")
             }
         }
@@ -299,7 +310,7 @@ struct ReaderView: View {
             let saved = ReadingStateStore.shared.state(for: article.postID)
             bookmarks = saved.bookmarks
             if let blockID = saved.blockID, document.index(of: blockID) != nil, saved.progress > 0.02 {
-                resumeOffer = saved
+                resumeBlockID = blockID
             }
             #if DEBUG
             // `-debugJumpToProgress 42` jumps as resuming would, for checking
@@ -370,19 +381,12 @@ struct ReaderView: View {
                     self.returnOffer = nil
                     returnOfferIsSticky = false
                 }
-            } else if let resumeOffer, let blockID = resumeOffer.blockID {
-                ResumeBanner(progress: resumeOffer.progress, palette: settings.palette) {
-                    move(to: blockID, in: document)
-                } onDismiss: {
-                    self.resumeOffer = nil
-                }
             }
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 12)
         .transition(.move(edge: .bottom).combined(with: .opacity))
         .animation(.spring(duration: 0.35), value: returnOffer)
-        .animation(.spring(duration: 0.35), value: resumeOffer)
     }
 
     /// Percentage read, from the live scroll position when it's known.
@@ -410,9 +414,6 @@ struct ReaderView: View {
             withAnimation { returnOffer = nil }
             returnOfferIsSticky = false
         }
-        if resumeOffer != nil, progress > 0.1 {
-            withAnimation { resumeOffer = nil }
-        }
     }
 
     /// While reading, only settled positions are saved, so an accidental jump
@@ -432,9 +433,9 @@ struct ReaderView: View {
     private func savePosition(blockID: String, progress: Double) {
         var state = ReadingStateStore.shared.state(for: article.postID)
         guard state.blockID != blockID else { return }
-        // Don't overwrite a saved position with the top of the article while the
-        // resume offer is still up.
-        if resumeOffer != nil && progress < 0.02 { return }
+        // Don't overwrite a saved position with the top of the article before
+        // the reader has been moved back to it.
+        if resumeBlockID != nil { return }
         state.blockID = blockID
         state.progress = progress
         state.updatedAt = .now
@@ -443,10 +444,7 @@ struct ReaderView: View {
 
     private func move(to blockID: String, in document: ReaderDocument) {
         ignoreJumpsUntil = .now.addingTimeInterval(1.5)
-        withAnimation {
-            returnOffer = nil
-            resumeOffer = nil
-        }
+        withAnimation { returnOffer = nil }
         returnOfferIsSticky = false
         scrollTarget = blockID
     }

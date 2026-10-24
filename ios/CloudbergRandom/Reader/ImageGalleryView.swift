@@ -10,7 +10,7 @@ struct ImageGalleryView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selection: String
     @State private var chromeVisible = true
-    @State private var loaded: [String: UIImage] = [:]
+    @State private var loaded: [String: LoadedImage] = [:]
     @State private var toast: String?
 
     init(images: [ReaderDocument.Image], startingAt start: ReaderDocument.Image,
@@ -30,7 +30,7 @@ struct ImageGalleryView: View {
 
             TabView(selection: $selection) {
                 ForEach(images) { image in
-                    ZoomableImage(image: loaded[image.metadata.id])
+                    ZoomableImage(loaded: loaded[image.metadata.id])
                         .ignoresSafeArea()
                         .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { chromeVisible.toggle() } }
                         .task { await load(image) }
@@ -96,15 +96,22 @@ struct ImageGalleryView: View {
                 .fixedSize(horizontal: false, vertical: true)
             }
             HStack {
-                if let current, let image = loaded[current.metadata.id] {
-                    ShareLink(item: ShareableImage(image: image),
-                              preview: SharePreview(current.caption.isEmpty ? "Image" : current.caption, image: Image(uiImage: image))) {
-                        Label("Share", systemImage: "square.and.arrow.up")
+                if let current, let loaded = loaded[current.metadata.id] {
+                    let preview = SharePreview(current.caption.isEmpty ? "Image" : current.caption,
+                                               image: Image(uiImage: loaded.image))
+                    if let animation = loaded.animationData {
+                        ShareLink(item: ShareableAnimatedImage(data: animation), preview: preview) {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+                    } else {
+                        ShareLink(item: ShareableImage(image: loaded.image), preview: preview) {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
                     }
                     Spacer()
-                    Button { save(image) } label: { Label("Save", systemImage: "square.and.arrow.down") }
+                    Button { save(current) } label: { Label("Save", systemImage: "square.and.arrow.down") }
                     Spacer()
-                    Button { copy(image) } label: { Label("Copy", systemImage: "doc.on.doc") }
+                    Button { copy(current) } label: { Label("Copy", systemImage: "doc.on.doc") }
                     Spacer()
                     Button {
                         dismiss()
@@ -127,19 +134,21 @@ struct ImageGalleryView: View {
 
     private func load(_ image: ReaderDocument.Image) async {
         guard loaded[image.metadata.id] == nil else { return }
-        loaded[image.metadata.id] = try? await ImageLoader.shared.image(id: image.metadata.id)
+        loaded[image.metadata.id] = try? await ImageLoader.shared.load(id: image.metadata.id)
     }
 
-    private func save(_ image: UIImage) {
+    private func save(_ image: ReaderDocument.Image) {
         Task {
-            let saved = await PhotoLibrarySaver.save(image)
+            let saved = await ImageActions.save(id: image.metadata.id)
             show(saved ? "Saved to Photos" : "Couldn't save — check Photos access in Settings")
         }
     }
 
-    private func copy(_ image: UIImage) {
-        UIPasteboard.general.image = image
-        show("Copied")
+    private func copy(_ image: ReaderDocument.Image) {
+        Task {
+            await ImageActions.copy(id: image.metadata.id)
+            show("Copied")
+        }
     }
 
     private func show(_ message: String) {
@@ -196,20 +205,21 @@ enum PhotoLibrarySaver {
     }
 }
 
-/// A UIScrollView-backed image for smooth pinch and double-tap zooming.
+/// A UIScrollView-backed image for smooth pinch and double-tap zooming, which
+/// keeps animating while you zoom.
 struct ZoomableImage: UIViewRepresentable {
-    let image: UIImage?
+    let loaded: LoadedImage?
 
     func makeUIView(context: Context) -> ZoomingScrollView {
         ZoomingScrollView()
     }
 
     func updateUIView(_ view: ZoomingScrollView, context: Context) {
-        view.setImage(image)
+        view.show(loaded)
     }
 
     final class ZoomingScrollView: UIScrollView, UIScrollViewDelegate {
-        private let imageView = UIImageView()
+        private let imageView = AnimatedImageHostView()
         private let spinner = UIActivityIndicatorView(style: .large)
 
         override init(frame: CGRect) {
@@ -233,10 +243,18 @@ struct ZoomableImage: UIViewRepresentable {
 
         required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-        func setImage(_ image: UIImage?) {
-            guard imageView.image !== image else { return }
-            imageView.image = image
-            image == nil ? spinner.startAnimating() : spinner.stopAnimating()
+        func show(_ loaded: LoadedImage?) {
+            guard let loaded else {
+                spinner.startAnimating()
+                return
+            }
+            if let animation = loaded.animationData {
+                imageView.play(animation)
+            } else {
+                guard imageView.image !== loaded.image else { return }
+                imageView.image = loaded.image
+            }
+            spinner.stopAnimating()
             zoomScale = 1
             setNeedsLayout()
         }
