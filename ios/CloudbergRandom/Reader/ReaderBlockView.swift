@@ -78,14 +78,10 @@ struct ReaderBlockView: View {
             .contextMenu {
                 Button("View Full Screen", systemImage: "arrow.up.left.and.arrow.down.right") { onOpenImage(image) }
                 Button("Save to Photos", systemImage: "square.and.arrow.down") {
-                    Task {
-                        if let loaded = try? await ImageLoader.shared.image(id: image.id) {
-                            _ = await PhotoLibrarySaver.save(loaded)
-                        }
-                    }
+                    Task { _ = await ImageActions.save(id: image.id) }
                 }
                 Button("Copy", systemImage: "doc.on.doc") {
-                    Task { UIPasteboard.general.image = try? await ImageLoader.shared.image(id: image.id) }
+                    Task { await ImageActions.copy(id: image.id) }
                 }
             }
             .accessibilityAddTraits(.isButton)

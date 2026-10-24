@@ -9,6 +9,11 @@ struct RandomArticleView: View {
     @State private var lastIndex: Int = -1
     @State private var safariTarget: IdentifiableURL?
     @State private var statsArticle: Article?
+    /// Loaded covers, so a new card arrives with its image already in place and
+    /// slides in as one piece. Holds the outgoing card's cover too, so it keeps
+    /// its image while it slides away.
+    @State private var covers: [Article.ID: UIImage] = [:]
+    @State private var pendingPick: Task<Void, Never>?
 
     var body: some View {
         ZStack {
@@ -119,15 +124,10 @@ struct RandomArticleView: View {
 
     private func cover(for article: Article) -> some View {
         ZStack {
-            if let coverURL = article.coverImageURL {
-                AsyncImage(url: coverURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    default:
-                        placeholder
-                    }
-                }
+            if let image = covers[article.id] {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
             } else {
                 placeholder
             }
@@ -135,6 +135,17 @@ struct RandomArticleView: View {
         .frame(height: 200)
         .frame(maxWidth: .infinity)
         .clipped()
+        .task(id: article.id) {
+            // Usually already loaded before the card was shown; this covers the
+            // first card and covers that took too long to wait for.
+            guard covers[article.id] == nil, let image = await coverImage(for: article) else { return }
+            withAnimation(.easeOut(duration: 0.2)) { covers[article.id] = image }
+        }
+    }
+
+    private func coverImage(for article: Article) async -> UIImage? {
+        guard let id = article.image, !id.isEmpty else { return nil }
+        return try? await ImageLoader.shared.load(id: id).image
     }
 
     private var placeholder: some View {
@@ -215,8 +226,29 @@ struct RandomArticleView: View {
         } while articles.count > 1 && index == lastIndex
 
         lastIndex = index
-        withAnimation(.easeOut(duration: 0.3)) {
-            currentIndex = index
+        let article = articles[index]
+
+        pendingPick?.cancel()
+        pendingPick = Task {
+            // Load the cover first, but don't hold up the card for a slow network.
+            let image = await withTaskGroup(of: UIImage?.self) { group in
+                group.addTask { await coverImage(for: article) }
+                group.addTask {
+                    try? await Task.sleep(for: .seconds(1.5))
+                    return nil
+                }
+                let first = await group.next() ?? nil
+                group.cancelAll()
+                return first
+            }
+            guard !Task.isCancelled else { return }
+            // Only the outgoing and incoming cards need their covers.
+            let outgoing = currentArticle?.id
+            covers = covers.filter { $0.key == outgoing }
+            if let image { covers[article.id] = image }
+            withAnimation(.easeOut(duration: 0.3)) {
+                currentIndex = index
+            }
         }
     }
 }

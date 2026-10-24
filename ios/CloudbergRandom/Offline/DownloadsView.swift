@@ -191,8 +191,9 @@ struct OfflineStatusIcon: View {
             .foregroundColor(Theme.accent)
             .accessibilityLabel("Text saved. Download images")
         case .complete:
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(Theme.accent)
+            Image(systemName: "checkmark.circle")
+                .imageScale(.small)
+                .foregroundColor(Theme.textDim.opacity(0.6))
                 .accessibilityLabel("Available offline")
         }
     }
