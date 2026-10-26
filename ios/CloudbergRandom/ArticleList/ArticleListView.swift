@@ -88,7 +88,8 @@ struct ArticleListView: View {
                 }
             }
             .navigationTitle("Articles")
-            .toolbarBackground(Theme.background, for: .navigationBar)
+            .toolbarBackground(.automatic, for: .navigationBar)
+            .softScrollEdge()
             .searchable(text: $searchText, prompt: "Search \(articles.count) articles")
             .task {
                 recompute()
@@ -375,6 +376,19 @@ private struct TopInsetReporter: ViewModifier {
             }
         } else {
             content
+        }
+    }
+}
+
+private extension View {
+    /// Lets content fade under the bar rather than meeting a hard edge, which
+    /// is what the glass bars are drawn to sit over.
+    @ViewBuilder
+    func softScrollEdge() -> some View {
+        if #available(iOS 26.0, *) {
+            scrollEdgeEffectStyle(.soft, for: .top)
+        } else {
+            self
         }
     }
 }
