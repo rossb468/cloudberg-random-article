@@ -40,6 +40,16 @@ struct Article: Codable, Identifiable, Hashable {
 }
 
 enum ArticleStore {
+    /// Looks an article up by its Medium post id, for restoring saved state.
+    static func article(postID: String) -> Article? {
+        byPostID[postID]
+    }
+
+    private static let byPostID: [String: Article] = Dictionary(
+        all.map { ($0.postID, $0) },
+        uniquingKeysWith: { first, _ in first }
+    )
+
     static let all: [Article] = {
         guard let fileURL = Bundle.main.url(forResource: "articles", withExtension: "json"),
               let data = try? Data(contentsOf: fileURL),

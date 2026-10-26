@@ -5,7 +5,7 @@ enum ArticleSort: String, CaseIterable, Identifiable {
     case mostEngaging, mostClaps, topOnReddit, mostDiscussed
 
     /// Engagement numbers the stat sorts read.
-    struct Context {
+    struct Context: Equatable {
         var stats: [String: ArticleStats] = [:]
         var ranking = EngagementRanking(stats: [:])
 
