@@ -21,6 +21,7 @@ struct ArticleListView: View {
     @State private var webPage: IdentifiableURL?
     @State private var statsArticle: Article?
     @State private var showingDownloads = false
+    @Environment(AppSettings.self) private var appSettings
     @Environment(EngagementStore.self) private var engagement
 
     private let articles = ArticleStore.all
@@ -87,6 +88,10 @@ struct ArticleListView: View {
                 await restoreScroll(proxy)
             }
             .onChange(of: sort) { _, _ in recompute() }
+            .onChange(of: appSettings.availableSorts()) { _, available in
+                if !available.contains(sort) { sort = available.first ?? .newest }
+                recompute()
+            }
             .onChange(of: searchText) { _, text in
                 session.listSearch = text
                 recompute()
@@ -124,27 +129,9 @@ struct ArticleListView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("Sort", selection: $sort) {
-                            ForEach(ArticleSort.allCases.filter { !$0.isEngagement }) { option in
+                            ForEach(appSettings.availableSorts()) { option in
                                 Label(option.label, systemImage: option.systemImage).tag(option)
                             }
-                            Section("Engagement") {
-                                ForEach(ArticleSort.allCases.filter(\.isEngagement)) { option in
-                                    Label(option.label, systemImage: option.systemImage).tag(option)
-                                }
-                            }
-                        }
-                        Section {
-                            if engagement.isRefreshing {
-                                Button("Stop Updating Medium Stats", systemImage: "stop.circle") {
-                                    engagement.cancelRefresh()
-                                }
-                            } else {
-                                Button("Update Medium Stats", systemImage: "arrow.clockwise") {
-                                    engagement.refreshMediumStats()
-                                }
-                            }
-                        } footer: {
-                            Text("Re-reads every article page from Medium for current claps and responses.")
                         }
                     } label: {
                         Label("Sort", systemImage: "arrow.up.arrow.down")
