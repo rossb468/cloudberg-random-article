@@ -26,6 +26,8 @@ final class ReadingStateStore {
     /// How far through each article you are, so lists can show progress
     /// without reading a file per row. Filled in from disk after launch.
     private(set) var progressByPostID: [String: Double] = [:]
+    /// When each of those was last read, for ordering what's in progress.
+    private(set) var readAtByPostID: [String: Date] = [:]
 
     @ObservationIgnored private let directory: URL
     @ObservationIgnored private var cache: [String: ReadingState] = [:]
@@ -46,20 +48,38 @@ final class ReadingStateStore {
     func reloadProgress() async {
         let scanned = await Self.scanProgress(in: directory)
         // Anything saved while the scan ran is newer than what it found.
-        progressByPostID = scanned.merging(progressByPostID) { _, newer in newer }
+        progressByPostID = scanned.progress.merging(progressByPostID) { _, newer in newer }
+        readAtByPostID = scanned.readAt.merging(readAtByPostID) { _, newer in newer }
     }
 
-    private nonisolated static func scanProgress(in directory: URL) async -> [String: Double] {
+    private nonisolated static func scanProgress(
+        in directory: URL
+    ) async -> (progress: [String: Double], readAt: [String: Date]) {
         await Task.detached(priority: .utility) {
             let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
             var progress: [String: Double] = [:]
+            var readAt: [String: Date] = [:]
             for file in files where file.pathExtension == "json" {
                 guard let data = try? Data(contentsOf: file),
                       let state = try? JSONDecoder().decode(ReadingState.self, from: data) else { continue }
-                progress[file.deletingPathExtension().lastPathComponent] = state.progress
+                let postID = file.deletingPathExtension().lastPathComponent
+                progress[postID] = state.progress
+                readAt[postID] = state.updatedAt
             }
-            return progress
+            return (progress, readAt)
         }.value
+    }
+
+    /// Articles you've started but haven't finished, most recently read first.
+    func inProgress(from articles: [Article], finishedAbove: Double = 0.97) -> [Article] {
+        articles
+            .filter { article in
+                guard let progress = progressByPostID[article.postID] else { return false }
+                return progress > 0.02 && progress < finishedAbove
+            }
+            .sorted { lhs, rhs in
+                (readAtByPostID[lhs.postID] ?? .distantPast) > (readAtByPostID[rhs.postID] ?? .distantPast)
+            }
     }
 
     func state(for postID: String) -> ReadingState {
@@ -74,6 +94,7 @@ final class ReadingStateStore {
         guard cache[postID] != state else { return }
         cache[postID] = state
         progressByPostID[postID] = state.progress
+        readAtByPostID[postID] = state.updatedAt ?? .now
         try? JSONEncoder().encode(state).write(to: file(for: postID), options: .atomic)
     }
 
@@ -81,6 +102,7 @@ final class ReadingStateStore {
     func clearAll() {
         cache = [:]
         progressByPostID = [:]
+        readAtByPostID = [:]
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
         for file in files where file.pathExtension == "json" {
             try? FileManager.default.removeItem(at: file)

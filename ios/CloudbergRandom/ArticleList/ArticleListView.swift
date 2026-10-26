@@ -22,10 +22,18 @@ struct ArticleListView: View {
     @State private var statsArticle: Article?
     @State private var showingDownloads = false
     @Environment(AppSettings.self) private var appSettings
+    @Environment(ReadingStateStore.self) private var reading
     @Environment(EngagementStore.self) private var engagement
 
     private let articles = ArticleStore.all
     private static let listSpace = "articleList"
+    private static let inProgressTitle = "Continue Reading"
+
+    /// Only when the whole list is on screen: a search is its own answer.
+    private var inProgressArticles: [Article] {
+        guard appSettings.showInProgressSection, searchText.isEmpty else { return [] }
+        return reading.inProgress(from: articles)
+    }
 
 
     var body: some View {
@@ -207,12 +215,20 @@ struct ArticleListView: View {
     }
 
     private var sections: [(title: String?, articles: [Article])] {
-        let articles = ordered
-        guard sort.groupsByYear else { return [(nil, articles)] }
+        let inProgress = inProgressArticles
+        let started = Set(inProgress.map(\.id))
+        // Articles in progress appear once, at the top: a row in two places
+        // confuses both the eye and the list's own row identity.
+        let articles = started.isEmpty ? ordered : ordered.filter { !started.contains($0.id) }
         var result: [(title: String?, articles: [Article])] = []
+        if !inProgress.isEmpty { result.append((Self.inProgressTitle, inProgress)) }
+        guard sort.groupsByYear else {
+            if !articles.isEmpty { result.append((inProgress.isEmpty ? nil : "All Articles", articles)) }
+            return result
+        }
         for article in articles {
             let year = article.publishedDate.map { String(Calendar.current.component(.year, from: $0)) } ?? "Undated"
-            if result.last?.title == year {
+            if result.last?.title == year, result.last?.title != Self.inProgressTitle {
                 result[result.count - 1].articles.append(article)
             } else {
                 result.append((year, [article]))
@@ -226,6 +242,7 @@ struct ArticleRow: View {
     let article: Article
     @Environment(EngagementStore.self) private var engagement
     @Environment(ReadingStateStore.self) private var reading
+    @Environment(AppSettings.self) private var appSettings
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -252,7 +269,9 @@ struct ArticleRow: View {
                 .font(.caption)
                 .foregroundColor(Theme.textDim)
                 ArticleStatsLine(stats: engagement.stats(for: article))
-                ReadingProgressLine(progress: reading.progress(for: article.postID))
+                if appSettings.showReadingProgress {
+                    ReadingProgressLine(progress: reading.progress(for: article.postID))
+                }
             }
             Spacer(minLength: 0)
             OfflineStatusIcon(article: article)
