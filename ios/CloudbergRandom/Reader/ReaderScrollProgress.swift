@@ -23,3 +23,20 @@ extension View {
         }
     }
 }
+
+extension View {
+    /// Reports how far the scroll view has been scrolled, in points, so the
+    /// reader can tell which way you're going.
+    @ViewBuilder
+    func onReaderScrollOffset(_ action: @escaping (CGFloat) -> Void) -> some View {
+        if #available(iOS 18.0, *) {
+            onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.contentOffset.y + geometry.contentInsets.top
+            } action: { _, offset in
+                action(offset)
+            }
+        } else {
+            self
+        }
+    }
+}
