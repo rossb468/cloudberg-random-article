@@ -17,21 +17,25 @@ xcodebuild test -project ios/CloudbergRandom.xcodeproj -scheme CloudbergRandom -
 
 ### Features
 
-- **Random** — a random article card, as in the web app.
-- **Articles** — every article, searchable by title and subtitle, sorted by date, title, length, or engagement (overall, claps, Reddit upvotes, or comments). Rows show how far through an article you are. Swipe to download, or long-press for the full set of actions: share, read, download, the Reddit discussion, engagement stats, and open on Medium.
+- **Random** — a random article card: tap the card to read it, the dice button or a pull-down for another.
+- **Articles** — every article, searchable by title and subtitle, sorted by date, title, length, or engagement (overall, claps, Reddit upvotes, or comments). Articles you've started sit in a "Continue Reading" section at the top, rows show how far through you are, and an article that isn't downloaded carries a cloud. Swipe to download, or long-press for share, read, download, the Reddit discussion, open on Medium, and remove. Tapping a row's engagement numbers opens the full breakdown.
 - **Downloads** — reached from the Articles toolbar: download every article (text, and optionally images — about 3 GB in total; Medium serves the 244 GIFs in the archive at full size, which is much of that) for offline reading, with progress, retry, and storage used. Any article you open is saved for offline reading as well.
 - **Reader** — articles push onto the tab's navigation stack (so they swipe back), parsed out of Medium's pages and laid out natively, with percentage read in the toolbar:
   - Reading preferences: seven color themes (including custom colors), nine typefaces, text size, line and paragraph spacing, margins, line width, justification, hyphenation, first-line indents, and keep-screen-on.
   - Full-screen image viewer with swipe, pinch and double-tap zoom, and share / save to Photos / copy.
   - Animated GIFs play, in the article and in the viewer; Reduce Motion shows a still frame instead.
+  - Type, contents, images and the article's actions in one stack in the bottom-left corner, which fades away as you read down and returns on a tap or the first scroll back up.
   - Saved reading position with an offer to resume, and a "Back to 42%" pill whenever the position jumps far away (a status-bar tap, a hard fling, or navigating somewhere).
   - Bookmarks, and up/down buttons that step between bookmarks and sections (Admiral Cloudberg marks sections with "◊◊◊"); a contents sheet with a position scrubber.
   - A media browser showing all of an article's images and captions, grouped by section.
-- **Picks up where you left off** — the tab you were on, the article open in each tab (and your place in it), the random card, and the article list's scroll position and search all survive a relaunch.
+- **Picks up where you left off** — the tab you were on, the article open in each tab (and your place in it), the random card, and the article list's scroll position and search all survive a relaunch, and ride iCloud to your other devices.
+- **Settings** — the in-progress section and row progress, which sorts the Articles menu offers, hiding discussion and engagement entirely, reopening the last article, hiding reader controls while scrolling, opening links in the app, not repeating the last random article, downloads and storage, iCloud sync, and clearing reading history.
 - **Reddit** — each article links to where it was posted on r/CatastrophicFailure.
 - **Engagement stats** — Medium claps and responses plus Reddit upvotes, upvote ratio and comments, with each article's rank in the archive.
 
 ### Where the data comes from
+
+Settings, reading positions, bookmarks and the last screen sync through iCloud's key-value store; downloads stay on each device. The iCloud capability may need enabling in Xcode's Signing & Capabilities before a device build.
 
 | Data | Source | Stored in the repo? |
 | --- | --- | --- |
@@ -93,6 +97,16 @@ Each feature was built on its own branch and merged into `main` with a merge com
 | `feature/reddit-discussions` | Links to each article's r/CatastrophicFailure discussion |
 | `fix/random-card-layout` | Keep the random card on narrow screens |
 | `feature/engagement-stats` | Engagement stats and sorting |
+| `feature/session-restore` | Reopening the last tab, article, card and scroll position |
+| `feature/settings` | Settings tab |
+| `feature/in-progress-section` | "Continue Reading" at the top of Articles |
+| `feature/article-actions` | Context menu order; cloud badge for undownloaded articles |
+| `feature/random-card` | Card as one tap target; pull to refresh |
+| `feature/reader-controls` | One corner stack of reader controls; fixed-height type sheet |
+| `feature/reader-autohide` | Controls fade while reading |
+| `feature/glass-header` | Translucent Articles header |
+| `feature/app-icon` | Placeholder icon |
+| `feature/icloud-sync` | iCloud sync for reading state and settings |
 
 Later features build on earlier ones (for example, stats sort the article list and read Reddit data), so reverting an early feature may require reverting the ones after it.
 
