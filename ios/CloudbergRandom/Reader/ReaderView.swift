@@ -96,7 +96,9 @@ struct ReaderView: View {
         }
         .sheet(isPresented: $showingSettings) {
             ReaderSettingsView(settings: settings)
-                .presentationDetents([.medium, .large])
+                // One detent only: the sheet stays put and its own content
+                // scrolls, so the article keeps changing behind it.
+                .presentationDetents([.medium])
                 .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         }
         .fullScreenCover(item: $galleryStart) { start in
@@ -141,6 +143,7 @@ struct ReaderView: View {
             positionChanged(to: blockID, in: document)
         }
         .overlay(alignment: .bottom) { positionOffers(document) }
+        .overlay(alignment: .bottomLeading) { controls(document) }
         .task {
             // Pick up where you left off, once the scroll view is in place.
             guard let blockID = resumeBlockID else { return }
@@ -229,40 +232,61 @@ struct ReaderView: View {
         .foregroundStyle(settings.palette.text)
     }
 
+    /// Reading, type, contents, images and the article's own actions, stacked
+    /// in one corner rather than spread across two toolbars.
+    @ViewBuilder
+    private func controls(_ document: ReaderDocument) -> some View {
+        let previous = document.previousStop(before: topBlockID, bookmarks: bookmarks)
+        let next = document.nextStop(after: topBlockID, bookmarks: bookmarks)
+        VStack(spacing: 2) {
+            controlButton("textformat.size", "Reading settings") { showingSettings = true }
+            controlButton("list.bullet", "Contents and bookmarks") { showingNavigator = true }
+            controlButton("photo.on.rectangle.angled", "Browse images") { showingMedia = true }
+                .disabled(document.images.isEmpty)
+            Menu {
+                ArticleActionsMenu(article: article, onOpenURL: open)
+                Section {
+                    Button(isBookmarked ? "Remove Bookmark" : "Bookmark This Paragraph",
+                           systemImage: isBookmarked ? "bookmark.fill" : "bookmark") {
+                        toggleBookmark(in: document)
+                    }
+                    Button("Previous Section", systemImage: "chevron.up") {
+                        previous.map { navigate(to: $0.blockID, in: document) }
+                    }
+                    .disabled(previous == nil)
+                    Button("Next Section", systemImage: "chevron.down") {
+                        next.map { navigate(to: $0.blockID, in: document) }
+                    }
+                    .disabled(next == nil)
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .frame(width: 44, height: 44)
+            }
+            .accessibilityLabel("More actions")
+        }
+        .font(.system(size: 17, weight: .medium))
+        .foregroundStyle(settings.palette.accent)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(settings.palette.secondaryText.opacity(0.2))
+        )
+        .sensoryFeedback(.selection, trigger: bookmarks.count)
+        .padding(.leading, 12)
+        .padding(.bottom, 16)
+    }
+
+    private func controlButton(_ systemImage: String, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .frame(width: 44, height: 44)
+        }
+        .accessibilityLabel(label)
+    }
+
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        ToolbarItemGroup(placement: .bottomBar) {
-            if let document {
-                let previous = document.previousStop(before: topBlockID, bookmarks: bookmarks)
-                let next = document.nextStop(after: topBlockID, bookmarks: bookmarks)
-                Button { showingNavigator = true } label: {
-                    Image(systemName: "list.bullet")
-                }
-                .accessibilityLabel("Contents and bookmarks")
-                Spacer()
-                Button { previous.map { navigate(to: $0.blockID, in: document) } } label: {
-                    Image(systemName: "chevron.up")
-                }
-                .disabled(previous == nil)
-                .accessibilityLabel("Previous section or bookmark")
-                Button { toggleBookmark(in: document) } label: {
-                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                }
-                .sensoryFeedback(.selection, trigger: bookmarks.count)
-                .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Bookmark this paragraph")
-                Button { next.map { navigate(to: $0.blockID, in: document) } } label: {
-                    Image(systemName: "chevron.down")
-                }
-                .disabled(next == nil)
-                .accessibilityLabel("Next section or bookmark")
-                Spacer()
-                Button { showingMedia = true } label: {
-                    Image(systemName: "photo.on.rectangle.angled")
-                }
-                .disabled(document.images.isEmpty)
-                .accessibilityLabel("Browse images")
-            }
-        }
         ToolbarItem(placement: .principal) {
             if let percent = readPercentage {
                 Text("\(percent)%")
@@ -272,19 +296,6 @@ struct ReaderView: View {
                     .contentTransition(.identity)
                     .transaction { $0.animation = nil }
                     .accessibilityLabel("\(percent) percent read")
-            }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            Button { showingSettings = true } label: {
-                Image(systemName: "textformat.size")
-            }
-            .accessibilityLabel("Reading settings")
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                ArticleActionsMenu(article: article, onOpenURL: open)
-            } label: {
-                Image(systemName: "ellipsis.circle")
             }
         }
     }
