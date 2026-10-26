@@ -20,7 +20,7 @@ struct ReadingState: Codable, Equatable {
 /// offline library so removing downloads keeps positions and bookmarks.
 @MainActor
 @Observable
-final class ReadingStateStore {
+final class ReadingStateStore: CloudReadingSyncable {
     static let shared = ReadingStateStore()
 
     /// How far through each article you are, so lists can show progress
@@ -95,7 +95,20 @@ final class ReadingStateStore {
         cache[postID] = state
         progressByPostID[postID] = state.progress
         readAtByPostID[postID] = state.updatedAt ?? .now
-        try? JSONEncoder().encode(state).write(to: file(for: postID), options: .atomic)
+        guard let data = try? JSONEncoder().encode(state) else { return }
+        try? data.write(to: file(for: postID), options: .atomic)
+        CloudSync.shared.pushReading(data, updatedAt: state.updatedAt ?? .now, postID: postID)
+    }
+
+    /// Takes a position read on another device, when it's the newer one.
+    func applyCloudReading(_ payload: Data, updatedAt: Date, postID: String) {
+        guard let incoming = try? JSONDecoder().decode(ReadingState.self, from: payload) else { return }
+        let localUpdatedAt = state(for: postID).updatedAt ?? .distantPast
+        guard updatedAt > localUpdatedAt else { return }
+        cache[postID] = incoming
+        progressByPostID[postID] = incoming.progress
+        readAtByPostID[postID] = incoming.updatedAt ?? updatedAt
+        try? payload.write(to: file(for: postID), options: .atomic)
     }
 
     /// Forgets every saved position and bookmark.
@@ -107,6 +120,7 @@ final class ReadingStateStore {
         for file in files where file.pathExtension == "json" {
             try? FileManager.default.removeItem(at: file)
         }
+        CloudSync.shared.removeAllReading()
     }
 
     private func file(for postID: String) -> URL {

@@ -36,7 +36,14 @@ struct RootView: View {
         .environment(EngagementStore.shared)
         .environment(ReadingStateStore.shared)
         .environment(AppSettings.shared)
-        .task { reopenLastArticles() }
+        .task {
+            CloudSync.shared.start(
+                syncables: [AppSettings.shared, ReaderSettings.shared, SessionState.shared],
+                reading: ReadingStateStore.shared,
+                enabled: { AppSettings.shared.syncWithiCloud }
+            )
+            reopenLastArticles()
+        }
         .onChange(of: selectedTab) { _, tab in session.tab = tab }
         .onChange(of: randomPath) { _, path in session.setOpenPostID(path.last?.postID, for: .random) }
         .onChange(of: articlesPath) { _, path in session.setOpenPostID(path.last?.postID, for: .articles) }

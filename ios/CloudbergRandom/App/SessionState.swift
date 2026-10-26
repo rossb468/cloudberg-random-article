@@ -9,7 +9,7 @@ import Observation
 /// what was on screen.
 @MainActor
 @Observable
-final class SessionState {
+final class SessionState: CloudSyncable {
     static let shared = SessionState()
 
     enum Tab: String, Codable, Hashable {
@@ -29,11 +29,14 @@ final class SessionState {
     private let defaults: UserDefaults
     private var stored: Stored { didSet { scheduleSave() } }
     private var saveTask: Task<Void, Never>?
+    private(set) var cloudUpdatedAt = Date.distantPast
+    let cloudKey = "session"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         stored = defaults.data(forKey: Self.key)
             .flatMap { try? JSONDecoder().decode(Stored.self, from: $0) } ?? Stored()
+        cloudUpdatedAt = defaults.object(forKey: Self.key + ".updatedAt") as? Date ?? .distantPast
     }
 
     var tab: Tab {
@@ -84,6 +87,20 @@ final class SessionState {
     }
 
     private func write() {
+        cloudUpdatedAt = .now
         defaults.set(try? JSONEncoder().encode(stored), forKey: Self.key)
+        defaults.set(cloudUpdatedAt, forKey: Self.key + ".updatedAt")
+        CloudSync.shared.push(self)
+    }
+
+    func cloudPayload() -> Data? {
+        try? JSONEncoder().encode(stored)
+    }
+
+    /// Picked up where another device left off, so this one opens there too.
+    func applyCloudPayload(_ data: Data) {
+        guard let incoming = try? JSONDecoder().decode(Stored.self, from: data), incoming != stored else { return }
+        defaults.set(data, forKey: Self.key)
+        stored = incoming
     }
 }
