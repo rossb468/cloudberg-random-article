@@ -25,6 +25,8 @@ struct ReaderView: View {
     /// article, and come back on a tap or the first scroll back up.
     @State private var controlsVisible = true
     @State private var lastScrollOffset: CGFloat?
+    /// The header floats over the article, so the article starts below it.
+    private static let headerHeight: CGFloat = 52
     @Environment(AppSettings.self) private var appSettings
 
     @State private var detector = JumpDetector()
@@ -148,7 +150,8 @@ struct ReaderView: View {
             .scrollTargetLayout()
             .frame(maxWidth: settings.maxLineWidth)
             .padding(.horizontal, settings.margin)
-            .padding(.vertical, 20)
+            .padding(.top, Self.headerHeight + 8)
+            .padding(.bottom, 20)
             .frame(maxWidth: .infinity)
         }
         .scrollPosition(id: $topBlockID, anchor: .top)
@@ -164,6 +167,12 @@ struct ReaderView: View {
         .overlay(alignment: .bottom) { positionOffers(document) }
         .overlay(alignment: .bottomLeading) {
             controls(document)
+                .opacity(controlsVisible ? 1 : 0)
+                .animation(.easeInOut(duration: 0.25), value: controlsVisible)
+                .allowsHitTesting(controlsVisible)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            sectionSteppers(document)
                 .opacity(controlsVisible ? 1 : 0)
                 .animation(.easeInOut(duration: 0.25), value: controlsVisible)
                 .allowsHitTesting(controlsVisible)
@@ -266,8 +275,6 @@ struct ReaderView: View {
     /// in one corner rather than spread across two toolbars.
     @ViewBuilder
     private func controls(_ document: ReaderDocument) -> some View {
-        let previous = document.previousStop(before: topBlockID, bookmarks: bookmarks)
-        let next = document.nextStop(after: topBlockID, bookmarks: bookmarks)
         VStack(spacing: 2) {
             controlButton("textformat.size", "Reading settings") { showingSettings = true }
             controlButton("list.bullet", "Contents and bookmarks") { showingNavigator = true }
@@ -280,14 +287,6 @@ struct ReaderView: View {
                            systemImage: isBookmarked ? "bookmark.fill" : "bookmark") {
                         toggleBookmark(in: document)
                     }
-                    Button("Previous Section", systemImage: "chevron.up") {
-                        previous.map { navigate(to: $0.blockID, in: document) }
-                    }
-                    .disabled(previous == nil)
-                    Button("Next Section", systemImage: "chevron.down") {
-                        next.map { navigate(to: $0.blockID, in: document) }
-                    }
-                    .disabled(next == nil)
                 }
             } label: {
                 Image(systemName: "ellipsis")
@@ -315,14 +314,14 @@ struct ReaderView: View {
         .accessibilityLabel(label)
     }
 
-    /// The reader's own top bar: back and how far through you are.
+    /// The reader's own header: back, and how far through you are. Glass, so
+    /// the article shows through as it scrolls underneath.
     private var topBar: some View {
         HStack {
             Button { dismiss() } label: {
                 Image(systemName: "chevron.backward")
                     .font(.system(size: 17, weight: .semibold))
                     .frame(width: 44, height: 44)
-                    .background(.regularMaterial, in: Circle())
             }
             .accessibilityLabel("Back")
 
@@ -332,9 +331,6 @@ struct ReaderView: View {
                 Text("\(percent)%")
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(settings.palette.secondaryText)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
                     // Follows the scroll directly; any transition reads as flicker.
                     .contentTransition(.identity)
                     .transaction { $0.animation = nil }
@@ -346,7 +342,48 @@ struct ReaderView: View {
             Color.clear.frame(width: 44, height: 44)
         }
         .foregroundStyle(settings.palette.accent)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
+        .frame(height: Self.headerHeight)
+        .background {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .ignoresSafeArea(edges: .top)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(settings.palette.secondaryText.opacity(0.15))
+                .frame(height: 0.5)
+        }
+    }
+
+    /// Stepping between sections and bookmarks, kept where a thumb can reach it.
+    private func sectionSteppers(_ document: ReaderDocument) -> some View {
+        let previous = document.previousStop(before: topBlockID, bookmarks: bookmarks)
+        let next = document.nextStop(after: topBlockID, bookmarks: bookmarks)
+        return VStack(spacing: 2) {
+            Button { previous.map { navigate(to: $0.blockID, in: document) } } label: {
+                Image(systemName: "chevron.up")
+                    .frame(width: 44, height: 44)
+            }
+            .disabled(previous == nil)
+            .accessibilityLabel("Previous section or bookmark")
+
+            Button { next.map { navigate(to: $0.blockID, in: document) } } label: {
+                Image(systemName: "chevron.down")
+                    .frame(width: 44, height: 44)
+            }
+            .disabled(next == nil)
+            .accessibilityLabel("Next section or bookmark")
+        }
+        .font(.system(size: 17, weight: .medium))
+        .foregroundStyle(settings.palette.accent)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(settings.palette.secondaryText.opacity(0.2))
+        )
+        .padding(.trailing, 12)
+        .padding(.bottom, 16)
     }
 
     // MARK: - Actions
