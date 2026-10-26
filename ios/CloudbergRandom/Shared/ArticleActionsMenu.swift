@@ -7,9 +7,9 @@ struct ArticleActionsMenu: View {
     /// Omitted when the article is already open.
     var onRead: (() -> Void)?
     var onOpenURL: (URL) -> Void
-    var onShowStats: () -> Void
 
     @Environment(OfflineLibrary.self) private var library
+    @Environment(AppSettings.self) private var settings
 
     var body: some View {
         if let url = article.webURL {
@@ -23,16 +23,18 @@ struct ArticleActionsMenu: View {
             Button("Download", systemImage: "arrow.down.circle") { library.download(article) }
         case .textOnly:
             Button("Download Images", systemImage: "arrow.down.circle.dotted") { library.download(article) }
-            Button("Remove Download", systemImage: "trash", role: .destructive) { library.remove(article) }
-        case .complete:
-            Button("Remove Download", systemImage: "trash", role: .destructive) { library.remove(article) }
-        case .queued, .downloading:
+        case .complete, .queued, .downloading:
             EmptyView()
         }
-        RedditDiscussionMenuItems(article: article, open: onOpenURL)
-        Button("Engagement Stats", systemImage: "chart.bar", action: onShowStats)
+        if !settings.hideSocial {
+            RedditDiscussionMenuItems(article: article, open: onOpenURL)
+        }
         if let url = article.webURL {
             Button("Open on Medium", systemImage: "safari") { onOpenURL(url) }
+        }
+        // Destructive, so it sits at the bottom away from everything else.
+        if library.isAvailableOffline(article) {
+            Button("Remove Download", systemImage: "trash", role: .destructive) { library.remove(article) }
         }
     }
 }

@@ -45,15 +45,14 @@ struct ArticleListView: View {
                             Button {
                                 openArticle(article)
                             } label: {
-                                ArticleRow(article: article)
+                                ArticleRow(article: article) { statsArticle = article }
                             }
                             .swipeActions(edge: .trailing) { offlineSwipeAction(for: article) }
                             .contextMenu {
                                 ArticleActionsMenu(
                                     article: article,
                                     onRead: { openArticle(article) },
-                                    onOpenURL: { webPage = IdentifiableURL(url: $0) },
-                                    onShowStats: { statsArticle = article }
+                                    onOpenURL: { webPage = IdentifiableURL(url: $0) }
                                 )
                             }
                             .listRowBackground(Theme.background)
@@ -240,6 +239,8 @@ struct ArticleListView: View {
 
 struct ArticleRow: View {
     let article: Article
+    /// Tapping the engagement numbers opens the full breakdown.
+    var onShowStats: (() -> Void)?
     @Environment(EngagementStore.self) private var engagement
     @Environment(ReadingStateStore.self) private var reading
     @Environment(AppSettings.self) private var appSettings
@@ -268,7 +269,11 @@ struct ArticleRow: View {
                 }
                 .font(.caption)
                 .foregroundColor(Theme.textDim)
-                ArticleStatsLine(stats: engagement.stats(for: article))
+                if !appSettings.hideSocial {
+                    ArticleStatsLine(stats: engagement.stats(for: article))
+                        .contentShape(Rectangle())
+                        .onTapGesture { onShowStats?() }
+                }
                 if appSettings.showReadingProgress {
                     ReadingProgressLine(progress: reading.progress(for: article.postID))
                 }

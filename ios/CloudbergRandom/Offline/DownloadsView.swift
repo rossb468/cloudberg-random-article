@@ -162,11 +162,11 @@ struct OfflineStatusIcon: View {
         switch library.status(for: article) {
         case .notDownloaded:
             Button { library.download(article) } label: {
-                Image(systemName: "arrow.down.circle")
+                Image(systemName: "cloud")
             }
             .buttonStyle(.borderless)
             .foregroundColor(Theme.textDim)
-            .accessibilityLabel("Download for offline reading")
+            .accessibilityLabel("Not downloaded. Download for offline reading")
         case .queued:
             Image(systemName: "clock")
                 .foregroundColor(Theme.textDim)
@@ -191,9 +191,9 @@ struct OfflineStatusIcon: View {
             .foregroundColor(Theme.accent)
             .accessibilityLabel("Text saved. Download images")
         case .complete:
-            Image(systemName: "checkmark.circle")
-                .imageScale(.small)
-                .foregroundColor(Theme.textDim.opacity(0.6))
+            // Downloaded is the quiet state: no badge at all.
+            Color.clear
+                .frame(width: 0, height: 0)
                 .accessibilityLabel("Available offline")
         }
     }
