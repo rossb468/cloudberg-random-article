@@ -27,6 +27,7 @@ xcodebuild test -project ios/CloudbergRandom.xcodeproj -scheme CloudbergRandom -
   - Saved reading position with an offer to resume, and a "Back to 42%" pill whenever the position jumps far away (a status-bar tap, a hard fling, or navigating somewhere).
   - Bookmarks, and up/down buttons that step between bookmarks and sections (Admiral Cloudberg marks sections with "◊◊◊"); a contents sheet with a position scrubber.
   - A media browser showing all of an article's images and captions, grouped by section.
+- **Picks up where you left off** — the tab you were on, the article open in each tab (and your place in it), the random card, and the article list's scroll position and search all survive a relaunch.
 - **Reddit** — each article links to where it was posted on r/CatastrophicFailure.
 - **Engagement stats** — Medium claps and responses plus Reddit upvotes, upvote ratio and comments, with each article's rank in the archive.
 

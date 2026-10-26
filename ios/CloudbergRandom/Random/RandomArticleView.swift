@@ -14,6 +14,7 @@ struct RandomArticleView: View {
     /// its image while it slides away.
     @State private var covers: [Article.ID: UIImage] = [:]
     @State private var pendingPick: Task<Void, Never>?
+    private let session = SessionState.shared
 
     var body: some View {
         ZStack {
@@ -46,7 +47,16 @@ struct RandomArticleView: View {
             }
         }
         .onAppear {
-            if currentIndex == -1 { showRandomArticle() }
+            guard currentIndex == -1 else { return }
+            // The card that was showing last time, rather than a fresh roll on
+            // every launch.
+            if let postID = session.randomPostID,
+               let index = articles.firstIndex(where: { $0.postID == postID }) {
+                currentIndex = index
+                lastIndex = index
+            } else {
+                showRandomArticle()
+            }
         }
         .sheet(item: $statsArticle) { article in
             ArticleStatsView(article: article)
@@ -246,6 +256,7 @@ struct RandomArticleView: View {
             let outgoing = currentArticle?.id
             covers = covers.filter { $0.key == outgoing }
             if let image { covers[article.id] = image }
+            session.randomPostID = article.postID
             withAnimation(.easeOut(duration: 0.3)) {
                 currentIndex = index
             }

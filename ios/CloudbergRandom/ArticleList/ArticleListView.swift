@@ -3,112 +3,152 @@ import SwiftUI
 struct ArticleListView: View {
     @Environment(\.openArticle) private var openArticle
     @AppStorage("articleList.sort") private var sort: ArticleSort = .newest
-    @State private var searchText = ""
+    @State private var searchText = SessionState.shared.listSearch
+    /// The filtered, sorted list, kept in state so scrolling doesn't re-sort
+    /// the catalog every time a row appears.
+    @State private var ordered: [Article] = []
+    /// Rows currently alive in the list, and how far each one's top sits from
+    /// the top of the list when the system reports it (iOS 18+). The list keeps
+    /// a row or two alive beyond the screen, so the offsets are what make the
+    /// remembered row the one actually at the top.
+    @State private var visibleIDs: Set<Article.ID> = []
+    @State private var rowOffsets: [Article.ID: CGFloat] = [:]
+    /// Where the visible area starts inside the list: under the navigation bar,
+    /// not at the list's own top edge.
+    @State private var topInset: CGFloat = 0
+    @State private var restoredScroll = false
+    private let session = SessionState.shared
     @State private var webPage: IdentifiableURL?
     @State private var statsArticle: Article?
     @State private var showingDownloads = false
     @Environment(EngagementStore.self) private var engagement
 
     private let articles = ArticleStore.all
+    private static let listSpace = "articleList"
+
 
     var body: some View {
-        List {
-            ForEach(sections, id: \.title) { section in
-                Section {
-                    ForEach(section.articles) { article in
-                        Button {
-                            openArticle(article)
-                        } label: {
-                            ArticleRow(article: article)
+        ScrollViewReader { proxy in
+            List {
+                ForEach(sections, id: \.title) { section in
+                    Section {
+                        ForEach(section.articles) { article in
+                            Button {
+                                openArticle(article)
+                            } label: {
+                                ArticleRow(article: article)
+                            }
+                            .swipeActions(edge: .trailing) { offlineSwipeAction(for: article) }
+                            .contextMenu {
+                                ArticleActionsMenu(
+                                    article: article,
+                                    onRead: { openArticle(article) },
+                                    onOpenURL: { webPage = IdentifiableURL(url: $0) },
+                                    onShowStats: { statsArticle = article }
+                                )
+                            }
+                            .listRowBackground(Theme.background)
+                            .listRowSeparatorTint(Theme.border)
+                            .trackingTopRow(id: article.id, space: Self.listSpace) { offset in
+                                if let offset {
+                                    visibleIDs.insert(article.id)
+                                    rowOffsets[article.id] = offset
+                                } else {
+                                    visibleIDs.remove(article.id)
+                                    rowOffsets.removeValue(forKey: article.id)
+                                }
+                                noteTopRow()
+                            }
                         }
-                        .swipeActions(edge: .trailing) { offlineSwipeAction(for: article) }
-                        .contextMenu {
-                            ArticleActionsMenu(
-                                article: article,
-                                onRead: { openArticle(article) },
-                                onOpenURL: { webPage = IdentifiableURL(url: $0) },
-                                onShowStats: { statsArticle = article }
-                            )
+                    } header: {
+                        if let title = section.title {
+                            Text(title)
+                                .font(.subheadline.bold())
+                                .foregroundColor(Theme.accent)
                         }
-                        .listRowBackground(Theme.background)
-                        .listRowSeparatorTint(Theme.border)
-                    }
-                } header: {
-                    if let title = section.title {
-                        Text(title)
-                            .font(.subheadline.bold())
-                            .foregroundColor(Theme.accent)
                     }
                 }
             }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
-        .overlay {
-            if filtered.isEmpty {
-                ContentUnavailableView.search(text: searchText)
-            }
-        }
-        .navigationTitle("Articles")
-        .toolbarBackground(Theme.background, for: .navigationBar)
-        .searchable(text: $searchText, prompt: "Search \(articles.count) articles")
-        .sheet(item: $webPage) { page in
-            SafariView(url: page.url).ignoresSafeArea()
-        }
-        .sheet(item: $statsArticle) { article in
-            ArticleStatsView(article: article)
-                .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $showingDownloads) {
-            DownloadsView()
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                if engagement.isRefreshing {
-                    HStack(spacing: 6) {
-                        ProgressView()
-                        Text("\(engagement.refreshProgress.done)/\(engagement.refreshProgress.total)")
-                            .font(.caption.monospacedDigit())
-                            .foregroundColor(Theme.textDim)
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Updating Medium stats")
+            .coordinateSpace(.named(Self.listSpace))
+            .trackingTopInset { topInset = $0 }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Theme.background)
+            .overlay {
+                if ordered.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
                 }
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showingDownloads = true } label: {
-                    downloadsIcon
-                }
-                .accessibilityLabel("Downloads")
+            .navigationTitle("Articles")
+            .toolbarBackground(Theme.background, for: .navigationBar)
+            .searchable(text: $searchText, prompt: "Search \(articles.count) articles")
+            .task {
+                recompute()
+                await restoreScroll(proxy)
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Picker("Sort", selection: $sort) {
-                        ForEach(ArticleSort.allCases.filter { !$0.isEngagement }) { option in
-                            Label(option.label, systemImage: option.systemImage).tag(option)
+            .onChange(of: sort) { _, _ in recompute() }
+            .onChange(of: searchText) { _, text in
+                session.listSearch = text
+                recompute()
+            }
+            .onChange(of: engagement.sortContext) { _, _ in recompute() }
+            .sheet(item: $webPage) { page in
+                SafariView(url: page.url).ignoresSafeArea()
+            }
+            .sheet(item: $statsArticle) { article in
+                ArticleStatsView(article: article)
+                    .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showingDownloads) {
+                DownloadsView()
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if engagement.isRefreshing {
+                        HStack(spacing: 6) {
+                            ProgressView()
+                            Text("\(engagement.refreshProgress.done)/\(engagement.refreshProgress.total)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundColor(Theme.textDim)
                         }
-                        Section("Engagement") {
-                            ForEach(ArticleSort.allCases.filter(\.isEngagement)) { option in
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Updating Medium stats")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingDownloads = true } label: {
+                        downloadsIcon
+                    }
+                    .accessibilityLabel("Downloads")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("Sort", selection: $sort) {
+                            ForEach(ArticleSort.allCases.filter { !$0.isEngagement }) { option in
                                 Label(option.label, systemImage: option.systemImage).tag(option)
                             }
-                        }
-                    }
-                    Section {
-                        if engagement.isRefreshing {
-                            Button("Stop Updating Medium Stats", systemImage: "stop.circle") {
-                                engagement.cancelRefresh()
-                            }
-                        } else {
-                            Button("Update Medium Stats", systemImage: "arrow.clockwise") {
-                                engagement.refreshMediumStats()
+                            Section("Engagement") {
+                                ForEach(ArticleSort.allCases.filter(\.isEngagement)) { option in
+                                    Label(option.label, systemImage: option.systemImage).tag(option)
+                                }
                             }
                         }
-                    } footer: {
-                        Text("Re-reads every article page from Medium for current claps and responses.")
+                        Section {
+                            if engagement.isRefreshing {
+                                Button("Stop Updating Medium Stats", systemImage: "stop.circle") {
+                                    engagement.cancelRefresh()
+                                }
+                            } else {
+                                Button("Update Medium Stats", systemImage: "arrow.clockwise") {
+                                    engagement.refreshMediumStats()
+                                }
+                            }
+                        } footer: {
+                            Text("Re-reads every article page from Medium for current claps and responses.")
+                        }
+                    } label: {
+                        Label("Sort", systemImage: "arrow.up.arrow.down")
                     }
-                } label: {
-                    Label("Sort", systemImage: "arrow.up.arrow.down")
                 }
             }
         }
@@ -142,12 +182,45 @@ struct ArticleListView: View {
         }
     }
 
-    private var filtered: [Article] {
-        sort.sorted(articles.filter { $0.matches(search: searchText) }, context: engagement.sortContext)
+    private func recompute() {
+        ordered = sort.sorted(articles.filter { $0.matches(search: searchText) }, context: engagement.sortContext)
+    }
+
+    /// Records the row at the top of the list, so it comes back to it. Opening
+    /// an article takes every row off screen, which isn't a new position — the
+    /// last row seen stays recorded.
+    private func noteTopRow() {
+        guard restoredScroll else { return }
+        guard let top = topRowID.flatMap({ id in ordered.first { $0.id == id } })
+            ?? ordered.first(where: { visibleIDs.contains($0.id) }) else { return }
+        session.listTopPostID = top.postID
+    }
+
+    /// The row at the top of the visible area: the first one that isn't
+    /// scrolled up under the navigation bar.
+    private var topRowID: Article.ID? {
+        let onScreen = rowOffsets.filter { $0.value >= topInset - 8 }
+        return onScreen.min { $0.value < $1.value }?.key
+            ?? rowOffsets.min { abs($0.value - topInset) < abs($1.value - topInset) }?.key
+    }
+
+    private func restoreScroll(_ proxy: ScrollViewProxy) async {
+        defer { restoredScroll = true }
+        guard !restoredScroll,
+              let postID = session.listTopPostID,
+              let article = ordered.first(where: { $0.postID == postID }) else { return }
+        // The list finishes laying out after this runs, and reorders again as
+        // engagement stats arrive — either of which drops it back at the top.
+        // Keep putting the row back until it stays.
+        for _ in 0..<6 {
+            proxy.scrollTo(article.id, anchor: .top)
+            try? await Task.sleep(for: .milliseconds(120))
+            if topRowID == article.id { break }
+        }
     }
 
     private var sections: [(title: String?, articles: [Article])] {
-        let articles = filtered
+        let articles = ordered
         guard sort.groupsByYear else { return [(nil, articles)] }
         var result: [(title: String?, articles: [Article])] = []
         for article in articles {
@@ -240,6 +313,57 @@ struct ReadingProgressLine: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(Int((progress * 100).rounded())) percent read")
             }
+        }
+    }
+}
+
+private extension View {
+    /// Reports a row's distance from the top of the list as it scrolls, and nil
+    /// when the row goes away. Falls back to appearance alone before iOS 18,
+    /// where a row's position can't be observed without it moving.
+    func trackingTopRow(id: Article.ID, space: String, onChange: @escaping (CGFloat?) -> Void) -> some View {
+        onAppear { onChange(0) }
+            .onDisappear { onChange(nil) }
+            .modifier(RowOffsetReporter(space: space, onChange: onChange))
+    }
+}
+
+private struct RowOffsetReporter: ViewModifier {
+    let space: String
+    let onChange: (CGFloat?) -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.frame(in: .named(space)).minY
+            } action: { offset in
+                onChange(offset)
+            }
+        } else {
+            content
+        }
+    }
+}
+
+private extension View {
+    /// Where the list's visible area starts, which is below the navigation bar.
+    func trackingTopInset(_ onChange: @escaping (CGFloat) -> Void) -> some View {
+        modifier(TopInsetReporter(onChange: onChange))
+    }
+}
+
+private struct TopInsetReporter: ViewModifier {
+    let onChange: (CGFloat) -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.contentInsets.top
+            } action: { _, inset in
+                onChange(inset)
+            }
+        } else {
+            content
         }
     }
 }
