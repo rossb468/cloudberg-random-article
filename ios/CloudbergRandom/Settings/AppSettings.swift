@@ -5,7 +5,7 @@ import Observation
 /// about how an article looks while you read it.
 @MainActor
 @Observable
-final class AppSettings {
+final class AppSettings: CloudSyncable {
     static let shared = AppSettings()
 
     private struct Stored: Codable, Equatable {
@@ -25,11 +25,14 @@ final class AppSettings {
 
     private let defaults: UserDefaults
     private var stored: Stored { didSet { save() } }
+    private(set) var cloudUpdatedAt = Date.distantPast
+    let cloudKey = "settings.app"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         stored = defaults.data(forKey: Self.key)
             .flatMap { try? JSONDecoder().decode(Stored.self, from: $0) } ?? Stored()
+        cloudUpdatedAt = defaults.object(forKey: Self.key + ".updatedAt") as? Date ?? .distantPast
     }
 
     /// Articles you've started, listed above the rest.
@@ -107,6 +110,20 @@ final class AppSettings {
     }
 
     private func save() {
+        cloudUpdatedAt = .now
         defaults.set(try? JSONEncoder().encode(stored), forKey: Self.key)
+        defaults.set(cloudUpdatedAt, forKey: Self.key + ".updatedAt")
+        CloudSync.shared.push(self)
+    }
+
+    func cloudPayload() -> Data? {
+        try? JSONEncoder().encode(stored)
+    }
+
+    func applyCloudPayload(_ data: Data) {
+        guard let incoming = try? JSONDecoder().decode(Stored.self, from: data), incoming != stored else { return }
+        // Straight to the field: writing through `stored` would push it back.
+        defaults.set(data, forKey: Self.key)
+        stored = incoming
     }
 }

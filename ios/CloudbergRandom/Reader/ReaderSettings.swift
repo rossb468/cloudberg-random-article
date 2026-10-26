@@ -4,7 +4,7 @@ import UIKit
 /// Reading preferences, shared by every article and persisted across launches.
 @MainActor
 @Observable
-final class ReaderSettings {
+final class ReaderSettings: CloudSyncable {
     static let shared = ReaderSettings()
 
     enum Typeface: String, CaseIterable, Identifiable, Codable {
@@ -99,11 +99,14 @@ final class ReaderSettings {
 
     private let defaults: UserDefaults
     private var loading = false
+    private(set) var cloudUpdatedAt = Date.distantPast
+    let cloudKey = "settings.reader"
     private static let storageKey = "reader.settings"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         load()
+        cloudUpdatedAt = defaults.object(forKey: Self.storageKey + ".updatedAt") as? Date ?? .distantPast
     }
 
     var palette: Palette { palette(for: theme) }
@@ -184,8 +187,20 @@ final class ReaderSettings {
         stored.keepScreenOn.map { keepScreenOn = $0 }
     }
 
+    func cloudPayload() -> Data? {
+        defaults.data(forKey: Self.storageKey)
+    }
+
+    func applyCloudPayload(_ data: Data) {
+        defaults.set(data, forKey: Self.storageKey)
+        load()
+    }
+
     private func save() {
         guard !loading else { return }
+        cloudUpdatedAt = .now
+        defaults.set(cloudUpdatedAt, forKey: Self.storageKey + ".updatedAt")
+        defer { CloudSync.shared.push(self) }
         let stored = Stored(
             typeface: typeface, fontSize: fontSize, lineHeight: lineHeight,
             paragraphSpacing: paragraphSpacing, indentParagraphs: indentParagraphs,
