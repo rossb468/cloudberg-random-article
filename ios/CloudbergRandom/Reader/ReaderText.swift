@@ -120,9 +120,13 @@ struct ReaderText: UIViewRepresentable {
     let attributedText: NSAttributedString
     let linkColor: Color
     var onOpenLink: (URL) -> Void = { _ in }
+    /// A tap anywhere in the text. The text view sees every touch first, so a
+    /// gesture on the SwiftUI side never hears about them.
+    var onTap: () -> Void = {}
 
     func makeUIView(context: Context) -> UITextView {
-        let view = UITextView()
+        let view = TappableTextView()
+        view.onTap = { [weak coordinator = context.coordinator] in coordinator?.onTap() }
         view.isEditable = false
         view.isSelectable = true
         view.isScrollEnabled = false
@@ -136,6 +140,7 @@ struct ReaderText: UIViewRepresentable {
 
     func updateUIView(_ view: UITextView, context: Context) {
         context.coordinator.onOpenLink = onOpenLink
+        context.coordinator.onTap = onTap
         view.linkTextAttributes = [
             .foregroundColor: UIColor(linkColor),
             .underlineStyle: NSUnderlineStyle.single.rawValue,
@@ -152,19 +157,34 @@ struct ReaderText: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onOpenLink: onOpenLink)
+        Coordinator(onOpenLink: onOpenLink, onTap: onTap)
     }
 
     final class Coordinator: NSObject, UITextViewDelegate {
         var onOpenLink: (URL) -> Void
+        var onTap: () -> Void
 
-        init(onOpenLink: @escaping (URL) -> Void) {
+        init(onOpenLink: @escaping (URL) -> Void, onTap: @escaping () -> Void) {
             self.onOpenLink = onOpenLink
+            self.onTap = onTap
         }
 
         func textView(_ textView: UITextView, primaryActionFor textItem: UITextItem, defaultAction: UIAction) -> UIAction? {
             guard case .link(let url) = textItem.content else { return defaultAction }
             return UIAction { [onOpenLink] _ in onOpenLink(url) }
         }
+    }
+}
+
+/// A text view that reports plain taps. The text view handles every touch in
+/// its bounds itself — selection, links, the lot — so a gesture recognizer
+/// added alongside it never hears about an ordinary tap.
+final class TappableTextView: UITextView {
+    var onTap: (() -> Void)?
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
+        guard touches.count == 1, let touch = touches.first, touch.tapCount == 1 else { return }
+        onTap?()
     }
 }

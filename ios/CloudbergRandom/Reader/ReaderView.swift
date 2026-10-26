@@ -3,6 +3,8 @@ import SwiftUI
 struct ReaderView: View {
     let article: Article
 
+    @Environment(\.dismiss) private var dismiss
+
     @Environment(\.scenePhase) private var scenePhase
     @Environment(OfflineLibrary.self) private var library
     private let settings = ReaderSettings.shared
@@ -19,6 +21,11 @@ struct ReaderView: View {
     /// Continuous scroll progress, which updates far more often than the top
     /// paragraph changes.
     @State private var scrollProgress: Double?
+    /// Safari-style: the controls step out of the way as you read down the
+    /// article, and come back on a tap or the first scroll back up.
+    @State private var controlsVisible = true
+    @State private var lastScrollOffset: CGFloat?
+    @Environment(AppSettings.self) private var appSettings
 
     @State private var detector = JumpDetector()
     @State private var returnOffer: JumpDetector.Jump?
@@ -49,9 +56,7 @@ struct ReaderView: View {
         .background(settings.palette.background.ignoresSafeArea())
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(settings.palette.background, for: .navigationBar, .bottomBar)
-        .toolbar(.hidden, for: .tabBar)
-        .toolbar { toolbar }
+        .toolbar(.hidden, for: .navigationBar, .tabBar)
         .tint(settings.palette.accent)
         .preferredColorScheme(settings.palette.colorScheme)
         .task { await load() }
@@ -121,14 +126,25 @@ struct ReaderView: View {
                 header
                     .padding(.bottom, 24)
                 ForEach(document.blocks) { block in
-                    ReaderBlockView(block: block, settings: settings, onOpenURL: open) { metadata in
-                        galleryStart = document.images.first { $0.blockID == block.id && $0.metadata.id == metadata.id }
-                    }
+                    ReaderBlockView(
+                        block: block,
+                        settings: settings,
+                        onOpenURL: open,
+                        onOpenImage: { metadata in
+                            galleryStart = document.images.first { $0.blockID == block.id && $0.metadata.id == metadata.id }
+                        },
+                        onTapContent: showControls
+                    )
                         .padding(.bottom, spacing(after: block))
                         .id(block.id)
                 }
                 footer
             }
+            .background(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { showControls() }
+            )
             .scrollTargetLayout()
             .frame(maxWidth: settings.maxLineWidth)
             .padding(.horizontal, settings.margin)
@@ -139,11 +155,25 @@ struct ReaderView: View {
         .onReaderScrollProgress { progress in
             scrollProgress = progress
         }
+        .onReaderScrollOffset { offset in
+            scrollChanged(to: offset)
+        }
         .onChange(of: topBlockID) { _, blockID in
             positionChanged(to: blockID, in: document)
         }
         .overlay(alignment: .bottom) { positionOffers(document) }
-        .overlay(alignment: .bottomLeading) { controls(document) }
+        .overlay(alignment: .bottomLeading) {
+            controls(document)
+                .opacity(controlsVisible ? 1 : 0)
+                .animation(.easeInOut(duration: 0.25), value: controlsVisible)
+                .allowsHitTesting(controlsVisible)
+        }
+        .overlay(alignment: .top) {
+            topBar
+                .opacity(controlsVisible ? 1 : 0)
+                .animation(.easeInOut(duration: 0.25), value: controlsVisible)
+                .allowsHitTesting(controlsVisible)
+        }
         .task {
             // Pick up where you left off, once the scroll view is in place.
             guard let blockID = resumeBlockID else { return }
@@ -285,19 +315,38 @@ struct ReaderView: View {
         .accessibilityLabel(label)
     }
 
-    @ToolbarContentBuilder
-    private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
+    /// The reader's own top bar: back and how far through you are.
+    private var topBar: some View {
+        HStack {
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.backward")
+                    .font(.system(size: 17, weight: .semibold))
+                    .frame(width: 44, height: 44)
+                    .background(.regularMaterial, in: Circle())
+            }
+            .accessibilityLabel("Back")
+
+            Spacer()
+
             if let percent = readPercentage {
                 Text("\(percent)%")
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(settings.palette.secondaryText)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.regularMaterial, in: Capsule())
                     // Follows the scroll directly; any transition reads as flicker.
                     .contentTransition(.identity)
                     .transaction { $0.animation = nil }
                     .accessibilityLabel("\(percent) percent read")
             }
+
+            Spacer()
+
+            Color.clear.frame(width: 44, height: 44)
         }
+        .foregroundStyle(settings.palette.accent)
+        .padding(.horizontal, 12)
     }
 
     // MARK: - Actions
@@ -447,6 +496,24 @@ struct ReaderView: View {
         withAnimation { returnOffer = nil }
         returnOfferIsSticky = false
         scrollTarget = blockID
+    }
+
+    /// Hides while you read forward, returns the moment you head back up.
+    private func scrollChanged(to offset: CGFloat) {
+        defer { lastScrollOffset = offset }
+        guard appSettings.autoHideReaderControls, let last = lastScrollOffset else { return }
+        let delta = offset - last
+        // Ignore the jitter of a finger resting on the screen.
+        guard abs(delta) > 6 else { return }
+        // Nothing to get out of the way of at the very top.
+        let visible = delta < 0 || offset < 40
+        guard visible != controlsVisible else { return }
+        withAnimation(.easeInOut(duration: 0.25)) { controlsVisible = visible }
+    }
+
+    private func showControls() {
+        guard !controlsVisible else { return }
+        withAnimation(.easeInOut(duration: 0.25)) { controlsVisible = true }
     }
 
     private func open(_ url: URL) {

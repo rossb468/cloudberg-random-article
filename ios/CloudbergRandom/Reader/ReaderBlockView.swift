@@ -5,6 +5,7 @@ struct ReaderBlockView: View {
     let settings: ReaderSettings
     var onOpenURL: (URL) -> Void
     var onOpenImage: (MediumImageMetadata) -> Void = { _ in }
+    var onTapContent: () -> Void = {}
 
     var body: some View {
         switch block.content {
@@ -40,7 +41,8 @@ struct ReaderBlockView: View {
         ReaderText(
             attributedText: ReaderTypesetter.text(text, markups: markups, style: style, settings: settings),
             linkColor: settings.palette.accent,
-            onOpenLink: onOpenURL
+            onOpenLink: onOpenURL,
+            onTap: onTapContent
         )
     }
 
@@ -62,7 +64,8 @@ struct ReaderBlockView: View {
                 ReaderText(
                     attributedText: ReaderTypesetter.caption(caption, markups: markups, settings: settings),
                     linkColor: settings.palette.accent,
-                    onOpenLink: onOpenURL
+                    onOpenLink: onOpenURL,
+                    onTap: onTapContent
                 )
                 .padding(.horizontal, 8)
             }
