@@ -77,6 +77,16 @@ final class ReadingStateStore {
         try? JSONEncoder().encode(state).write(to: file(for: postID), options: .atomic)
     }
 
+    /// Forgets every saved position and bookmark.
+    func clearAll() {
+        cache = [:]
+        progressByPostID = [:]
+        let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
+        for file in files where file.pathExtension == "json" {
+            try? FileManager.default.removeItem(at: file)
+        }
+    }
+
     private func file(for postID: String) -> URL {
         directory.appendingPathComponent("\(postID).json")
     }

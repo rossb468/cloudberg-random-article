@@ -26,11 +26,16 @@ struct RootView: View {
             .environment(\.openArticle, OpenArticleAction { articlesPath.append($0) })
             .tabItem { Label("Articles", systemImage: "list.bullet") }
             .tag(SessionState.Tab.articles)
+
+            SettingsView()
+                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tag(SessionState.Tab.settings)
         }
         .tint(Theme.accent)
         .environment(OfflineLibrary.shared)
         .environment(EngagementStore.shared)
         .environment(ReadingStateStore.shared)
+        .environment(AppSettings.shared)
         .task { reopenLastArticles() }
         .onChange(of: selectedTab) { _, tab in session.tab = tab }
         .onChange(of: randomPath) { _, path in session.setOpenPostID(path.last?.postID, for: .random) }
@@ -61,6 +66,7 @@ struct RootView: View {
 
     /// Reopens whatever was on screen last time.
     private func reopenLastArticles() {
+        guard AppSettings.shared.reopenLastArticle else { return }
         if let postID = session.openPostID(for: .random), let article = ArticleStore.article(postID: postID) {
             randomPath = [article]
         }

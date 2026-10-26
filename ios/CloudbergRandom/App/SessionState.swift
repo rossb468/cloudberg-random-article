@@ -13,7 +13,7 @@ final class SessionState {
     static let shared = SessionState()
 
     enum Tab: String, Codable, Hashable {
-        case random, articles
+        case random, articles, settings
     }
 
     private struct Stored: Codable, Equatable {
