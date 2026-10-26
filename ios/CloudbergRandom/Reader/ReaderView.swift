@@ -34,7 +34,6 @@ struct ReaderView: View {
     @State private var bookmarks: [Bookmark] = []
     @State private var showingNavigator = false
     @State private var showingMedia = false
-    @State private var showingStats = false
 
     var body: some View {
         Group {
@@ -61,11 +60,6 @@ struct ReaderView: View {
             state.bookmarks = bookmarks
             ReadingStateStore.shared.save(state, for: article.postID)
         }
-        .sheet(isPresented: $showingStats) {
-            ArticleStatsView(article: article)
-                .environment(EngagementStore.shared)
-                .presentationDetents([.medium, .large])
-        }
         .sheet(isPresented: $showingMedia) {
             if let document {
                 MediaBrowserView(document: document) { blockID in
@@ -87,7 +81,6 @@ struct ReaderView: View {
             showingSettings = UserDefaults.standard.bool(forKey: "debugShowReaderSettings")
             showingNavigator = UserDefaults.standard.string(forKey: "debugShowReaderPanel") == "contents"
             showingMedia = UserDefaults.standard.string(forKey: "debugShowReaderPanel") == "media"
-            showingStats = UserDefaults.standard.string(forKey: "debugShowReaderPanel") == "stats"
             #endif
         }
         .onChange(of: settings.keepScreenOn) { _, keepOn in
@@ -289,11 +282,7 @@ struct ReaderView: View {
         }
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
-                ArticleActionsMenu(
-                    article: article,
-                    onOpenURL: open,
-                    onShowStats: { showingStats = true }
-                )
+                ArticleActionsMenu(article: article, onOpenURL: open)
             } label: {
                 Image(systemName: "ellipsis.circle")
             }

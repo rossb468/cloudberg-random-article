@@ -8,7 +8,6 @@ struct RandomArticleView: View {
     @State private var currentIndex: Int = -1
     @State private var lastIndex: Int = -1
     @State private var safariTarget: IdentifiableURL?
-    @State private var statsArticle: Article?
     /// Loaded covers, so a new card arrives with its image already in place and
     /// slides in as one piece. Holds the outgoing card's cover too, so it keeps
     /// its image while it slides away.
@@ -57,10 +56,6 @@ struct RandomArticleView: View {
             } else {
                 showRandomArticle()
             }
-        }
-        .sheet(item: $statsArticle) { article in
-            ArticleStatsView(article: article)
-                .presentationDetents([.medium, .large])
         }
         .sheet(item: $safariTarget) { target in
             SafariView(url: target.url)
@@ -126,8 +121,7 @@ struct RandomArticleView: View {
             ArticleActionsMenu(
                 article: article,
                 onRead: { openArticle(article) },
-                onOpenURL: { safariTarget = IdentifiableURL(url: $0) },
-                onShowStats: { statsArticle = article }
+                onOpenURL: { safariTarget = IdentifiableURL(url: $0) }
             )
         }
     }
