@@ -14,6 +14,7 @@ struct RandomArticleView: View {
     @State private var covers: [Article.ID: UIImage] = [:]
     @State private var pendingPick: Task<Void, Never>?
     private let session = SessionState.shared
+    @Environment(AppSettings.self) private var appSettings
 
     var body: some View {
         ZStack {
@@ -24,11 +25,24 @@ struct RandomArticleView: View {
                     header
 
                     if let article = currentArticle {
-                        VStack(spacing: 14) {
-                            card(for: article)
+                        VStack(spacing: 16) {
+                            Button {
+                                openArticle(article)
+                            } label: {
+                                card(for: article)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Opens the article")
+
                             Text("Article \(currentIndex + 1) of \(articles.count) in the archive")
                                 .font(.footnote)
                                 .foregroundColor(Theme.textDim)
+
+                            newArticleButton
+
+                            if !appSettings.hideSocial {
+                                RedditDiscussionLink(article: article) { safariTarget = IdentifiableURL(url: $0) }
+                            }
                         }
                         .transition(.opacity.combined(with: .move(edge: .top)))
                         .id(article.id)
@@ -44,6 +58,7 @@ struct RandomArticleView: View {
                 .padding(.top, 24)
                 .padding(.bottom, 40)
             }
+            .refreshable { await pickRandomArticle() }
         }
         .onAppear {
             guard currentIndex == -1 else { return }
@@ -104,9 +119,6 @@ struct RandomArticleView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                actions(for: article)
-
-                RedditDiscussionLink(article: article) { safariTarget = IdentifiableURL(url: $0) }
             }
             .padding(20)
         }
@@ -172,49 +184,22 @@ struct RandomArticleView: View {
         .tracking(0.6)
     }
 
-    private func actions(for article: Article) -> some View {
-        // Side by side when there's room; stacked on narrower phones or at
-        // larger text sizes, instead of pushing the card off screen.
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) { actionButtons(for: article) }
-            VStack(alignment: .leading, spacing: 10) { actionButtons(for: article) }
-        }
-        .padding(.top, 4)
-    }
-
-    @ViewBuilder
-    private func actionButtons(for article: Article) -> some View {
+    private var newArticleButton: some View {
         Button(action: showRandomArticle) {
-            Text("🎲 New random article")
+            Label("New random article", systemImage: "dice")
                 .font(.subheadline.bold())
-                .fixedSize()
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
                 .background(Theme.accent)
                 .foregroundColor(Theme.accentText)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(Capsule())
         }
-
-        Button {
-            openArticle(article)
-        } label: {
-            Text("Read full article")
-                .font(.subheadline.bold())
-                .fixedSize()
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .foregroundColor(Theme.text)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Theme.border, lineWidth: 1)
-                )
-        }
+        .buttonStyle(.plain)
     }
 
     private var footer: some View {
         VStack(spacing: 2) {
-            Text("Article data pulled from Admiral Cloudberg's public Medium archive.")
-            Text("All writing belongs to Admiral Cloudberg — this is just a random-article picker.")
+            Text("All writing belongs to Admiral Cloudberg.")
         }
         .font(.caption)
         .foregroundColor(Theme.textDim)
@@ -223,37 +208,39 @@ struct RandomArticleView: View {
     }
 
     private func showRandomArticle() {
+        pendingPick?.cancel()
+        pendingPick = Task { await pickRandomArticle() }
+    }
+
+    private func pickRandomArticle() async {
         guard !articles.isEmpty else { return }
         var index: Int
         repeat {
             index = Int.random(in: 0..<articles.count)
-        } while articles.count > 1 && index == lastIndex
+        } while articles.count > 1 && appSettings.avoidRecentRandom && index == lastIndex
 
         lastIndex = index
         let article = articles[index]
 
-        pendingPick?.cancel()
-        pendingPick = Task {
-            // Load the cover first, but don't hold up the card for a slow network.
-            let image = await withTaskGroup(of: UIImage?.self) { group in
-                group.addTask { await coverImage(for: article) }
-                group.addTask {
-                    try? await Task.sleep(for: .seconds(1.5))
-                    return nil
-                }
-                let first = await group.next() ?? nil
-                group.cancelAll()
-                return first
+        // Load the cover first, but don't hold up the card for a slow network.
+        let image = await withTaskGroup(of: UIImage?.self) { group in
+            group.addTask { await coverImage(for: article) }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(1.5))
+                return nil
             }
-            guard !Task.isCancelled else { return }
-            // Only the outgoing and incoming cards need their covers.
-            let outgoing = currentArticle?.id
-            covers = covers.filter { $0.key == outgoing }
-            if let image { covers[article.id] = image }
-            session.randomPostID = article.postID
-            withAnimation(.easeOut(duration: 0.3)) {
-                currentIndex = index
-            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
+        }
+        guard !Task.isCancelled else { return }
+        // Only the outgoing and incoming cards need their covers.
+        let outgoing = currentArticle?.id
+        covers = covers.filter { $0.key == outgoing }
+        if let image { covers[article.id] = image }
+        session.randomPostID = article.postID
+        withAnimation(.easeOut(duration: 0.3)) {
+            currentIndex = index
         }
     }
 }
