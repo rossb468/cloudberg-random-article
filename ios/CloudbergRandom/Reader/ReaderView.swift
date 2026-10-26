@@ -25,6 +25,9 @@ struct ReaderView: View {
     /// article, and come back on a tap or the first scroll back up.
     @State private var controlsVisible = true
     @State private var lastScrollOffset: CGFloat?
+    /// Whether the article has been scrolled under the header, which is what
+    /// brings the header's glass and title in.
+    @State private var isScrolled = false
     /// The header floats over the article, so the article starts below it.
     private static let headerHeight: CGFloat = 52
     @Environment(AppSettings.self) private var appSettings
@@ -177,12 +180,7 @@ struct ReaderView: View {
                 .animation(.easeInOut(duration: 0.25), value: controlsVisible)
                 .allowsHitTesting(controlsVisible)
         }
-        .overlay(alignment: .top) {
-            topBar
-                .opacity(controlsVisible ? 1 : 0)
-                .animation(.easeInOut(duration: 0.25), value: controlsVisible)
-                .allowsHitTesting(controlsVisible)
-        }
+        .overlay(alignment: .top) { topBar }
         .task {
             // Pick up where you left off, once the scroll view is in place.
             guard let blockID = resumeBlockID else { return }
@@ -314,46 +312,59 @@ struct ReaderView: View {
         .accessibilityLabel(label)
     }
 
-    /// The reader's own header: back, and how far through you are. Glass, so
-    /// the article shows through as it scrolls underneath.
+    /// The header stays with you, clear over the top of the article and
+    /// turning to glass once the article scrolls under it, with the title
+    /// alongside the back button.
     private var topBar: some View {
-        HStack {
+        HStack(spacing: 8) {
             Button { dismiss() } label: {
                 Image(systemName: "chevron.backward")
                     .font(.system(size: 17, weight: .semibold))
                     .frame(width: 44, height: 44)
+                    .background(.ultraThinMaterial, in: Circle())
             }
             .accessibilityLabel("Back")
 
-            Spacer()
+            Text(article.title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(settings.palette.text)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .opacity(isScrolled ? 1 : 0)
+                .accessibilityHidden(!isScrolled)
+
+            Spacer(minLength: 4)
 
             if let percent = readPercentage {
                 Text("\(percent)%")
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(settings.palette.secondaryText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(isScrolled ? AnyShapeStyle(.clear) : AnyShapeStyle(.ultraThinMaterial), in: Capsule())
                     // Follows the scroll directly; any transition reads as flicker.
                     .contentTransition(.identity)
                     .transaction { $0.animation = nil }
                     .accessibilityLabel("\(percent) percent read")
             }
-
-            Spacer()
-
-            Color.clear.frame(width: 44, height: 44)
         }
         .foregroundStyle(settings.palette.accent)
         .padding(.horizontal, 8)
         .frame(height: Self.headerHeight)
         .background {
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .ignoresSafeArea(edges: .top)
+            if isScrolled {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .ignoresSafeArea(edges: .top)
+                    .overlay(alignment: .bottom) {
+                        Rectangle()
+                            .fill(settings.palette.secondaryText.opacity(0.15))
+                            .frame(height: 0.5)
+                    }
+                    .transition(.opacity)
+            }
         }
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(settings.palette.secondaryText.opacity(0.15))
-                .frame(height: 0.5)
-        }
+        .animation(.easeInOut(duration: 0.2), value: isScrolled)
     }
 
     /// Stepping between sections and bookmarks, kept where a thumb can reach it.
@@ -538,6 +549,9 @@ struct ReaderView: View {
     /// Hides while you read forward, returns the moment you head back up.
     private func scrollChanged(to offset: CGFloat) {
         defer { lastScrollOffset = offset }
+        // Past the top, the header earns its background.
+        let scrolled = offset > 8
+        if scrolled != isScrolled { isScrolled = scrolled }
         guard appSettings.autoHideReaderControls, let last = lastScrollOffset else { return }
         let delta = offset - last
         // Ignore the jitter of a finger resting on the screen.
